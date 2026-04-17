@@ -1,36 +1,80 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ASG Monitoring Dashboard
+
+Real-time notification display system for the After Sales Department.
+
+## Features
+
+- Push notification API on port 8001
+- Real-time UI updates (no refresh needed)
+- SQLite local database persistence
+- Dark mode UI
+- Clean sidebar display
 
 ## Getting Started
 
-First, run the development server:
+1. **Install dependencies:**
+   ```bash
+   npm install
+   ```
 
+2. **Run in development mode:**
+   ```bash
+   npm run electron:dev
+   ```
+
+3. **Build for production:**
+   ```bash
+   npm run electron:build
+   ```
+
+4. **Run the built app:**
+   ```bash
+   npm run electron:start
+   ```
+
+## Push Notification API
+
+The dashboard runs an HTTP server on port 8001.
+
+**Push a notification:**
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+curl -X POST http://localhost:8001/api/notifications \
+  -H "Content-Type: application/json" \
+  -d '{"title": "Alert", "message": "Something happened"}'
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+**Get all notifications:**
+```bash
+curl http://localhost:8001/api/notifications
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+**Delete all notifications:**
+```bash
+curl -X DELETE http://localhost:8001/api/notifications
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+**Delete by ID:**
+```bash
+curl -X DELETE http://localhost:8001/api/notifications/1
+```
 
-## Learn More
+## API Response
 
-To learn more about Next.js, take a look at the following resources:
+Success:
+```json
+{ "success": true, "id": 1, "message": "Notification created successfully" }
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Error:
+```json
+{ "error": "Missing title or message" }
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## For Network Access
 
-## Deploy on Vercel
+To allow other computers on the network to push notifications:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. Find your IP address: `ipconfig` (Windows)
+2. Use: `http://YOUR_IP:8001/api/notifications`
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Note: Currently only localhost requests are allowed. For cross-network access, CORS needs to be enabled.
