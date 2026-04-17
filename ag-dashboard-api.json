@@ -1,0 +1,55 @@
+{
+  "info": {
+    "name": "ASG Notification Dashboard",
+    "description": "API collection for ASG Monitoring Dashboard",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://192.168.68.82:8001"
+    }
+  ],
+  "item": [
+    {
+      "name": "Push Notification",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/notifications",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"title\":\"New Ticket\",\"message\":\"Customer complaint received\",\"priority\":\"critical\"}"
+        }
+      }
+    },
+    {
+      "name": "Get All Notifications",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/notifications"
+      }
+    },
+    {
+      "name": "Get Notification by ID",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/notifications/1",
+        "description": "Change '1' to the notification ID you want to get"
+      }
+    },
+    {
+      "name": "Delete Notification by ID",
+      "request": {
+        "method": "DELETE",
+        "url": "{{baseUrl}}/api/notifications/1",
+        "description": "Change '1' to the notification ID you want to delete"
+      }
+    }
+  ]
+}
