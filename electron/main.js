@@ -147,6 +147,27 @@ function startHttpServer() {
       return;
     }
     
+    // GET /api/notifications/:id - Get notification by ID
+    if (req.method === 'GET' && url.startsWith('/api/notifications/')) {
+      const id = parseInt(url.split('/api/notifications/')[1]);
+      const results = db.exec(`SELECT * FROM notifications WHERE id = ${id}`);
+      
+      if (results.length === 0 || results[0].values.length === 0) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Notification not found' }));
+        return;
+      }
+      
+      const columns = results[0].columns;
+      const row = results[0].values[0];
+      const notification = {};
+      columns.forEach((col, i) => notification[col] = row[i]);
+      
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(notification));
+      return;
+    }
+    
     // POST /api/notifications - Add new notification
     if (req.method === 'POST' && url === '/api/notifications') {
       let body = '';
