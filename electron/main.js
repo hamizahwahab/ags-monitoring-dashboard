@@ -112,15 +112,17 @@ function handleNewNotification(notification) {
 // HTTP Server for Push Notifications
 function startHttpServer() {
   const server = http.createServer((req, res) => {
-    // CORS disabled - uncomment to enable for cross-origin requests
-    // res.setHeader('Access-Control-Allow-Origin', '*');
-    // res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    // res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-    // if (req.method === 'OPTIONS') {
-    //   res.writeHead(204);
-    //   res.end();
-    //   return;
-    // }
+    // CORS - needed for frontend to fetch from API (different port)
+    const origin = req.headers.origin;
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
     
     const url = req.url.split('?')[0]; // Remove query params
     
