@@ -2,22 +2,27 @@
 
 import { useEffect, useRef } from 'react';
 
-export default function Siren() {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+let sirenAudio: HTMLAudioElement | null = null;
 
-  const playSiren = () => {
-    try {
-      if (!audioRef.current) {
-        audioRef.current = new Audio('/siren.mp3');
-      }
-      
-      // Reset to beginning if already playing
-      audioRef.current.currentTime = 0;
-      audioRef.current.play();
-    } catch (err) {
-      console.log('Audio play failed:', err);
+export const playSiren = () => {
+  try {
+    // Audio should already be preloaded
+    if (sirenAudio) {
+      sirenAudio.currentTime = 0;
+      sirenAudio.play();
     }
-  };
+  } catch (err) {
+    console.log('Audio play failed:', err);
+  }
+};
+
+export default function Siren() {
+  // Preload audio on mount
+  useEffect(() => {
+    // Preload the audio file
+    sirenAudio = new Audio('/siren.mp3');
+    sirenAudio.load();
+  }, []);
 
   useEffect(() => {
     if (window.electronAPI) {
