@@ -59,6 +59,18 @@ async function initDatabase() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
+  
+  // Crises table for crisis panel
+  db.run(`
+    CREATE TABLE IF NOT EXISTS crises (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      description TEXT NOT NULL,
+      severity TEXT DEFAULT 'high',
+      status TEXT DEFAULT 'active',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
 
   db.run(`
     CREATE TABLE IF NOT EXISTS crises (
