@@ -59,10 +59,22 @@ async function initDatabase() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS crises (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      description TEXT NOT NULL,
+      severity TEXT DEFAULT 'high',
+      status TEXT DEFAULT 'active',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
   
   saveDatabase();
   console.log('Database initialized at:', dbPath);
 }
+
 
 function saveDatabase() {
   if (db && dbPath) {
@@ -89,15 +101,11 @@ function handleNewNotification(notification) {
     const newNotification = {};
     columns.forEach((col, i) => newNotification[col] = result[0].values[0][i]);
     
-    // Send to renderer process - and notify to refresh
     if (mainWindow && mainWindow.webContents && !mainWindow.isDestroyed()) {
-      // Wait for page to be ready
       mainWindow.webContents.once('did-finish-load', () => {
-        console.log('Page loaded, sending notification');
         mainWindow.webContents.send('notification:new', newNotification);
         mainWindow.webContents.send('notification:refresh');
       });
-      // Also send immediately in case page is already loaded
       mainWindow.webContents.send('notification:new', newNotification);
       mainWindow.webContents.send('notification:refresh');
     } else {
@@ -105,6 +113,33 @@ function handleNewNotification(notification) {
     }
     
     return newNotification;
+  }
+  return null;
+}
+
+// Save crisis to database and notify renderer
+function handleNewCrisis(crisis) {
+  const createdAt = new Date().toISOString();
+  const stmt = db.prepare('INSERT INTO crises (title, description, severity, created_at) VALUES (?, ?, ?, ?)');
+  stmt.run([crisis.title, crisis.description, crisis.severity || 'high', createdAt]);
+  stmt.free();
+  
+  const lastId = db.exec('SELECT last_insert_rowid()')[0].values[0][0];
+  const result = db.exec(`SELECT * FROM crises WHERE id = ${lastId}`);
+  
+  saveDatabase();
+  
+  if (result.length > 0) {
+    const columns = result[0].columns;
+    const newCrisis = {};
+    columns.forEach((col, i) => newCrisis[col] = result[0].values[0][i]);
+    
+    if (mainWindow && mainWindow.webContents && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('crisis:new', newCrisis);
+      mainWindow.webContents.send('crisis:refresh');
+    }
+    
+    return newCrisis;
   }
   return null;
 }
@@ -152,7 +187,34 @@ function startHttpServer() {
       }
       return;
     }
-    
+
+    // GET /api/crises - Get all active crises
+    if (req.method === 'GET' && url === '/api/crises') {
+      try {
+        const results = db.exec('SELECT * FROM crises WHERE status = \'active\' ORDER BY created_at DESC');
+        if (results.length === 0) {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify([]));
+          return;
+        }
+        
+        const columns = results[0].columns;
+        const crises = results[0].values.map(row => {
+          const obj = {};
+          columns.forEach((col, i) => obj[col] = row[i]);
+          return obj;
+        });
+        
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(crises));
+      } catch (err) {
+        console.error('Error fetching crises:', err);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Failed to fetch crises' }));
+      }
+      return;
+    }
+
     // GET /api/notifications/:id - Get notification by ID
     if (req.method === 'GET' && url.startsWith('/api/notifications/')) {
       const idStr = url.split('/api/notifications/')[1];
@@ -235,7 +297,74 @@ function startHttpServer() {
       });
       return;
     }
-    
+
+    // POST /api/crises - Add new crisis
+    if (req.method === 'POST' && url === '/api/crises') {
+      let body = '';
+      
+      req.on('data', chunk => {
+        body += chunk.toString();
+      });
+      
+      req.on('end', () => {
+        try {
+          const crisis = JSON.parse(body);
+          
+          if (!crisis.title || !crisis.description) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Missing title or description' }));
+            return;
+          }
+          
+          const newCrisis = handleNewCrisis(crisis);
+          const crisisId = newCrisis.id;
+          
+          res.writeHead(201, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ 
+            success: true, 
+            id: crisisId,
+            message: 'Crisis created successfully'
+          }));
+          
+          console.log('New crisis received:', crisis.title);
+          
+        } catch (err) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid JSON' }));
+        }
+      });
+      return;
+    }
+
+        // DELETE /api/crises/:id - Resolve specific crisis
+    if (req.method === 'DELETE' && url.startsWith('/api/crises/')) {
+      const idStr = url.split('/api/crises/')[1];
+      const id = parseInt(idStr);
+      
+      if (isNaN(id) || id <= 0 || !Number.isInteger(id)) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Invalid ID' }));
+        return;
+      }
+      
+      try {
+        db.run('UPDATE crises SET status = \'resolved\' WHERE id = ?', [id]);
+        saveDatabase();
+        
+        if (mainWindow && mainWindow.webContents && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('crisis:refresh');
+        }
+        
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, message: `Crisis ${id} resolved` }));
+      } catch (err) {
+        console.error('Error resolving crisis:', err);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Failed to resolve crisis' }));
+      }
+      return;
+    }
+
     // DELETE /api/notifications - Clear all notifications
     if (req.method === 'DELETE' && url === '/api/notifications') {
       try {
@@ -335,13 +464,34 @@ function setupIPC() {
       return obj;
     });
   });
+  
+  ipcMain.handle('db:getCrises', () => {
+    const results = db.exec('SELECT * FROM crises WHERE status = \'active\' ORDER BY created_at DESC');
+    if (results.length === 0) return [];
+    
+    const columns = results[0].columns;
+    return results[0].values.map(row => {
+      const obj = {};
+      columns.forEach((col, i) => obj[col] = row[i]);
+      return obj;
+    });
+  });
 
   ipcMain.handle('db:addNotification', (event, notification) => {
     return handleNewNotification(notification);
   });
 
+  ipcMain.handle('db:addCrisis', (event, crisis) => {
+    return handleNewCrisis(crisis);
+  });
+  
   ipcMain.handle('db:deleteNotification', (event, id) => {
     db.run(`DELETE FROM notifications WHERE id = ?`, [id]);
+    saveDatabase();
+  });
+
+  ipcMain.handle('db:deleteCrisis', (event, id) => {
+    db.run(`UPDATE crises SET status = 'resolved' WHERE id = ?`, [id]);
     saveDatabase();
   });
 
