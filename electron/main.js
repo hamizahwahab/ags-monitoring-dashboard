@@ -71,17 +71,6 @@ async function initDatabase() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
-
-  db.run(`
-    CREATE TABLE IF NOT EXISTS crises (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      title TEXT NOT NULL,
-      description TEXT NOT NULL,
-      severity TEXT DEFAULT 'high',
-      status TEXT DEFAULT 'active',
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
   
   saveDatabase();
   console.log('Database initialized at:', dbPath);
@@ -131,27 +120,31 @@ function handleNewNotification(notification) {
 
 // Save crisis to database and notify renderer
 function handleNewCrisis(crisis) {
-  const createdAt = new Date().toISOString();
-  const stmt = db.prepare('INSERT INTO crises (title, description, severity, created_at) VALUES (?, ?, ?, ?)');
-  stmt.run([crisis.title, crisis.description, crisis.severity || 'high', createdAt]);
-  stmt.free();
-  
-  const lastId = db.exec('SELECT last_insert_rowid()')[0].values[0][0];
-  const result = db.exec(`SELECT * FROM crises WHERE id = ${lastId}`);
-  
-  saveDatabase();
-  
-  if (result.length > 0) {
-    const columns = result[0].columns;
-    const newCrisis = {};
-    columns.forEach((col, i) => newCrisis[col] = result[0].values[0][i]);
+  try {
+    const createdAt = new Date().toISOString();
+    const stmt = db.prepare('INSERT INTO crises (title, description, severity, created_at) VALUES (?, ?, ?, ?)');
+    stmt.run([crisis.title, crisis.description, crisis.severity || 'high', createdAt]);
+    stmt.free();
     
-    if (mainWindow && mainWindow.webContents && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('crisis:new', newCrisis);
-      mainWindow.webContents.send('crisis:refresh');
+    const lastId = db.exec('SELECT last_insert_rowid()')[0].values[0][0];
+    const result = db.exec(`SELECT * FROM crises WHERE id = ${lastId}`);
+    
+    saveDatabase();
+    
+    if (result.length > 0) {
+      const columns = result[0].columns;
+      const newCrisis = {};
+      columns.forEach((col, i) => newCrisis[col] = result[0].values[0][i]);
+      
+      if (mainWindow && mainWindow.webContents && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('crisis:new', newCrisis);
+        mainWindow.webContents.send('crisis:refresh');
+      }
+      
+      return newCrisis;
     }
-    
-    return newCrisis;
+  } catch (err) {
+    console.error('Error saving crisis:', err);
   }
   return null;
 }
@@ -505,6 +498,9 @@ function setupIPC() {
   ipcMain.handle('db:deleteCrisis', (event, id) => {
     db.run(`UPDATE crises SET status = 'resolved' WHERE id = ?`, [id]);
     saveDatabase();
+    if (mainWindow && mainWindow.webContents && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('crisis:refresh');
+    }
   });
 
   ipcMain.handle('db:clearAll', () => {
