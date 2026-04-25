@@ -8,6 +8,10 @@
     {
       "key": "baseUrl",
       "value": "http://192.168.68.82:8001"
+    },
+    {
+      "key": "apiKey",
+      "value": "YOUR-API-KEY-HERE"
     }
   ],
   "item": [
@@ -20,6 +24,10 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "X-API-Key",
+            "value": "{{apiKey}}"
           }
         ],
         "body": {
@@ -48,6 +56,12 @@
       "request": {
         "method": "DELETE",
         "url": "{{baseUrl}}/api/notifications/1",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "{{apiKey}}"
+          }
+        ],
         "description": "Change '1' to the notification ID you want to delete"
       }
     }

@@ -7,33 +7,32 @@
   "variable": [
     {
       "key": "baseUrl",
-      "value": "http://localhost:8001"
+      "value": "http://192.168.68.82:8001"
+    },
+    {
+      "key": "apiKey",
+      "value": "YOUR-API-KEY-HERE"
     }
   ],
   "item": [
     {
-      "name": "Create Crisis",
+      "name": "Push Crisis",
       "request": {
         "method": "POST",
+        "url": "{{baseUrl}}/api/crises",
         "header": [
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "X-API-Key",
+            "value": "{{apiKey}}"
           }
         ],
         "body": {
           "mode": "raw",
           "raw": "{\"title\":\"Database outage\",\"description\":\"Primary database cluster is unavailable\",\"severity\":\"high\"}"
-        },
-        "url": {
-          "raw": "{{baseUrl}}/api/crises",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "api",
-            "crises"
-          ]
         }
       }
     },
@@ -41,34 +40,21 @@
       "name": "Get Active Crises",
       "request": {
         "method": "GET",
-        "url": {
-          "raw": "{{baseUrl}}/api/crises",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "api",
-            "crises"
-          ]
-        }
+        "url": "{{baseUrl}}/api/crises"
       }
     },
     {
       "name": "Resolve Crisis",
       "request": {
         "method": "DELETE",
-        "url": {
-          "raw": "{{baseUrl}}/api/crises/1",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "api",
-            "crises",
-            "1"
-          ]
-        },
-        "description": "Replace '1' with the crisis ID to resolve."
+        "url": "{{baseUrl}}/api/crises/1",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "{{apiKey}}"
+          }
+        ],
+        "description": "Change '1' to the crisis ID you want to resolve"
       }
     }
   ]
