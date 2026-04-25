@@ -1,18 +1,7 @@
 'use client';
 
 import NotificationCard from './NotificationCard';
-
-interface Notification {
-  id: number;
-  notification_id?: string;
-  title: string;
-  message: string;
-  created_at: string;
-}
-
-interface NotificationPanelProps {
-  notifications: Notification[];
-}
+import { NotificationPanelProps } from '@/types';
 
 export default function NotificationPanel({ notifications }: NotificationPanelProps) {
   return (

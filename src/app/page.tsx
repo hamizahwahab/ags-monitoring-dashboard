@@ -9,24 +9,7 @@ import NotificationPanel from '@/components/NotificationPanel';
 import CrisisPanel from '@/components/CrisisPanel';
 import Siren, { playSiren } from '@/components/Siren';
 import { API_URL, CRISIS_API_URL, API_CONFIG } from '@/config/api';
-
-interface Notification {
-  id: number;
-  notification_id?: string;
-  title: string;
-  message: string;
-  priority: 'critical' | 'warning' | 'info';
-  created_at: string;
-}
-
-interface Crisis {
-  id: number;
-  title: string;
-  description: string;
-  severity: 'high' | 'medium' | 'low';
-  status: 'active' | 'resolved';
-  created_at: string;
-}
+import { Notification, Crisis } from '@/types';
 
 export default function Home() {
   const [notifications, setNotifications] = useState<Notification[]>([]);

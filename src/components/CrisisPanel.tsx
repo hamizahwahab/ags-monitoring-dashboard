@@ -1,20 +1,7 @@
 'use client';
 
 import React from 'react';
-
-interface Crisis {
-  id: number;
-  title: string;
-  description: string;
-  severity: 'high' | 'medium' | 'low';
-  status: string;
-  created_at: string;
-}
-
-interface CrisisPanelProps {
-  crises: Crisis[];
-  onResolveCrisis: (id: number) => void;
-}
+import { CrisisPanelProps } from '@/types';
 
 export default function CrisisPanel({ crises }: CrisisPanelProps) {
   return (
