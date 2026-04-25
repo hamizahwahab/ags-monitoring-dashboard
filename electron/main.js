@@ -95,21 +95,6 @@ function saveDatabase() {
   }
 }
 
-// Debounced save - save every 30 seconds instead of every write
-let saveTimeout = null;
-const SAVE_INTERVAL = 30000; // 30 seconds
-
-function saveDatabaseDebounced() {
-  if (saveTimeout) {
-    clearTimeout(saveTimeout);
-  }
-  saveTimeout = setTimeout(() => {
-    console.log('Saving database (debounced)...');
-    saveDatabase();
-    saveTimeout = null;
-  }, SAVE_INTERVAL);
-}
-
 // Save notification to database and notify renderer
 function handleNewNotification(notification) {
   const createdAt = new Date().toISOString();
@@ -120,7 +105,7 @@ function handleNewNotification(notification) {
   const lastId = db.exec('SELECT last_insert_rowid()')[0].values[0][0];
   const result = db.exec(`SELECT * FROM notifications WHERE id = ${lastId}`);
   
-  saveDatabaseDebounced();
+  saveDatabase();
   
   if (result.length > 0) {
     const columns = result[0].columns;
@@ -154,7 +139,7 @@ function handleNewCrisis(crisis) {
     const lastId = db.exec('SELECT last_insert_rowid()')[0].values[0][0];
     const result = db.exec(`SELECT * FROM crises WHERE id = ${lastId}`);
     
-    saveDatabaseDebounced();
+    saveDatabase();
     
     if (result.length > 0) {
       const columns = result[0].columns;
@@ -591,10 +576,6 @@ app.whenReady().then(async () => {
 });
 
 app.on('window-all-closed', () => {
-  // Save immediately on close (clear debounce timer first)
-  if (saveTimeout) {
-    clearTimeout(saveTimeout);
-  }
   saveDatabase();
   if (process.platform !== 'darwin') {
     app.quit();
