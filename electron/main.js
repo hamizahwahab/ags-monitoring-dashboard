@@ -193,6 +193,8 @@ function startHttpServer() {
 return;
     }
 
+    const url = req.url.split('?')[0]; // Remove query params
+
     // GET /api/crises/:id - Get crisis by ID
     if (req.method === 'GET' && url.startsWith('/api/crises/')) {
       const idStr = url.split('/api/crises/')[1];
