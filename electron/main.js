@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, session } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const http = require('http');
@@ -44,6 +44,25 @@ async function createWindow() {
 
   mainWindow.on('closed', () => {
     mainWindow = null;
+  });
+  
+  // Set Content Security Policy
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    const cspSources = [
+      "default-src 'self'",
+      `script-src 'self'${isDevMode ? " 'unsafe-inline' 'unsafe-eval'" : ''}`,
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data:",
+      "font-src 'self'",
+      `connect-src 'self'${isDevMode ? ' http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:* wss://localhost:* wss://127.0.0.1:*' : ''}`,
+    ].join('; ');
+
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [cspSources],
+      },
+    });
   });
 }
 
@@ -171,11 +190,46 @@ function startHttpServer() {
     if (req.method === 'OPTIONS') {
       res.writeHead(204);
       res.end();
+return;
+    }
+
+    // GET /api/crises/:id - Get crisis by ID
+    if (req.method === 'GET' && url.startsWith('/api/crises/')) {
+      const idStr = url.split('/api/crises/')[1];
+      const id = parseInt(idStr);
+      
+      // Validate ID is a positive integer
+      if (isNaN(id) || id <= 0 || !Number.isInteger(id)) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Invalid ID' }));
+        return;
+      }
+      
+      try {
+        const stmt = db.prepare('SELECT * FROM crises WHERE id = ?');
+        stmt.bind([id]);
+        const results = [];
+        while (stmt.step()) {
+          results.push(stmt.getAsObject());
+        }
+        stmt.free();
+        
+        if (results.length === 0) {
+          res.writeHead(404, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Crisis not found' }));
+          return;
+        }
+        
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(results[0]));
+      } catch (err) {
+        console.error('Error fetching crisis:', err);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Failed to fetch crisis' }));
+      }
       return;
     }
-    
-    const url = req.url.split('?')[0]; // Remove query params
-    
+
     // GET /api/notifications - Get all notifications
     if (req.method === 'GET' && url === '/api/notifications') {
       try {
@@ -313,6 +367,7 @@ function startHttpServer() {
           console.log('New notification received:', notification.title);
           
         } catch (err) {
+          console.error('Error creating notification:', err);
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'Invalid JSON' }));
         }
@@ -358,14 +413,15 @@ function startHttpServer() {
           console.log('New crisis received:', crisis.title);
           
         } catch (err) {
+          console.log('Error creating crisis:', err);
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'Invalid JSON' }));
         }
       });
-      return;
+return;
     }
-
-        // DELETE /api/crises/:id - Resolve specific crisis
+    
+    // DELETE /api/crises/:id - Resolve specific crisis
     if (req.method === 'DELETE' && url.startsWith('/api/crises/')) {
       // Check API key
       if (!isValidApiKey(req)) {
@@ -375,16 +431,49 @@ function startHttpServer() {
       }
       
       const idStr = url.split('/api/crises/')[1];
-      const id = parseInt(idStr);
       
-      if (isNaN(id) || id <= 0 || !Number.isInteger(id)) {
-        res.writeHead(400, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Invalid ID' }));
+      // Skip if it's "all" - handle that separately below
+      if (idStr === 'all') {
+        // Let it pass through to next handler
+      } else {
+        const id = parseInt(idStr);
+        
+        if (isNaN(id) || id <= 0 || !Number.isInteger(id)) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid ID' }));
+          return;
+        }
+        
+        try {
+          db.run('UPDATE crises SET status = \'resolved\' WHERE id = ?', [id]);
+          saveDatabase();
+          
+          if (mainWindow && mainWindow.webContents && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('crisis:refresh');
+          }
+          
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: true, message: `Crisis ${id} resolved` }));
+        } catch (err) {
+          console.error('Error resolving crisis:', err);
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Failed to resolve crisis' }));
+        }
+        return;
+      }
+    }
+    
+    // DELETE /api/crises/all - Clear all crises
+    if (req.method === 'DELETE' && url === '/api/crises/all') {
+      // Check API key
+      if (!isValidApiKey(req)) {
+        res.writeHead(401, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Unauthorized' }));
         return;
       }
       
       try {
-        db.run('UPDATE crises SET status = \'resolved\' WHERE id = ?', [id]);
+        db.run('DELETE FROM crises');
         saveDatabase();
         
         if (mainWindow && mainWindow.webContents && !mainWindow.isDestroyed()) {
@@ -392,17 +481,17 @@ function startHttpServer() {
         }
         
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ success: true, message: `Crisis ${id} resolved` }));
+        res.end(JSON.stringify({ success: true, message: 'All crises cleared' }));
       } catch (err) {
-        console.error('Error resolving crisis:', err);
+        console.error('Error clearing crises:', err);
         res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Failed to resolve crisis' }));
+        res.end(JSON.stringify({ error: 'Failed to clear crises' }));
       }
       return;
     }
-
+    
     // DELETE /api/notifications - Clear all notifications
-    if (req.method === 'DELETE' && url === '/api/notifications') {
+    if (req.method === 'DELETE' && url === '/api/notifications/all') {
       // Check API key
       if (!isValidApiKey(req)) {
         res.writeHead(401, { 'Content-Type': 'application/json' });
@@ -527,6 +616,17 @@ function setupIPC() {
     });
   });
 
+  ipcMain.handle('db:getCrisisById', (event, id) => {
+    const stmt = db.prepare('SELECT * FROM crises WHERE id = ?');
+    stmt.bind([id]);
+    const results = [];
+    while (stmt.step()) {
+      results.push(stmt.getAsObject());
+    }
+    stmt.free();
+    return results.length > 0 ? results[0] : null;
+  });
+
   ipcMain.handle('db:addNotification', (event, notification) => {
     return handleNewNotification(notification);
   });
@@ -546,6 +646,11 @@ function setupIPC() {
     if (mainWindow && mainWindow.webContents && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('crisis:refresh');
     }
+  });
+
+  ipcMain.handle('db:clearAllCrises', () => {
+    db.run('DELETE FROM crises');
+    saveDatabase();
   });
 
   ipcMain.handle('db:clearAll', () => {

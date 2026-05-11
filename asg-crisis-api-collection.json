@@ -56,6 +56,27 @@
         ],
         "description": "Change '1' to the crisis ID you want to resolve"
       }
+    },
+    {
+      "name": "Get Crisis By ID",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/crises/1",
+        "description": "Change '1' to the crisis ID you want to fetch"
+      }
+    },
+    {
+      "name": "Clear All Crises",
+      "request": {
+        "method": "DELETE",
+        "url": "{{baseUrl}}/api/crises/all",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "{{apiKey}}"
+          }
+        ]
+      }
     }
   ]
 }

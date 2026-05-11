@@ -128,6 +128,7 @@ useEffect(() => {
           if (prev.some(c => c.id === crisis.id)) {
             return prev;
           }
+          playSiren();
           return [crisis, ...prev];
         });
       });

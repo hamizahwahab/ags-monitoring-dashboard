@@ -16,8 +16,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.removeAllListeners('notification:refresh');
   },
   getCrises: () => ipcRenderer.invoke('db:getCrises'),
+  getCrisisById: (id) => ipcRenderer.invoke('db:getCrisisById', id),
   addCrisis: (crisis) => ipcRenderer.invoke('db:addCrisis', crisis),
   deleteCrisis: (id) => ipcRenderer.invoke('db:deleteCrisis', id),
+  clearAllCrises: () => ipcRenderer.invoke('db:clearAllCrises'),
   onNewCrisis: (callback) => {
     ipcRenderer.on('crisis:new', (event, crisis) => callback(crisis));
   },
@@ -28,3 +30,4 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.removeAllListeners('crisis:new');
     ipcRenderer.removeAllListeners('crisis:refresh');
   },
+});
