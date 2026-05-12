@@ -122,14 +122,20 @@ function handleNewNotification(notification) {
   stmt.free();
   
   const lastId = db.exec('SELECT last_insert_rowid()')[0].values[0][0];
-  const result = db.exec(`SELECT * FROM notifications WHERE id = ${lastId}`);
+  
+  // Use parameterized query (defense in depth)
+  const fetchStmt = db.prepare('SELECT * FROM notifications WHERE id = ?');
+  fetchStmt.bind([lastId]);
+  const result = [];
+  while (fetchStmt.step()) {
+    result.push(fetchStmt.getAsObject());
+  }
+  fetchStmt.free();
   
   saveDatabase();
   
   if (result.length > 0) {
-    const columns = result[0].columns;
-    const newNotification = {};
-    columns.forEach((col, i) => newNotification[col] = result[0].values[0][i]);
+    const newNotification = result[0];
     
     if (mainWindow && mainWindow.webContents && !mainWindow.isDestroyed()) {
       mainWindow.webContents.once('did-finish-load', () => {
@@ -156,14 +162,20 @@ function handleNewCrisis(crisis) {
     stmt.free();
     
     const lastId = db.exec('SELECT last_insert_rowid()')[0].values[0][0];
-    const result = db.exec(`SELECT * FROM crises WHERE id = ${lastId}`);
+    
+    // Use parameterized query (defense in depth)
+    const fetchStmt = db.prepare('SELECT * FROM crises WHERE id = ?');
+    fetchStmt.bind([lastId]);
+    const result = [];
+    while (fetchStmt.step()) {
+      result.push(fetchStmt.getAsObject());
+    }
+    fetchStmt.free();
     
     saveDatabase();
     
     if (result.length > 0) {
-      const columns = result[0].columns;
-      const newCrisis = {};
-      columns.forEach((col, i) => newCrisis[col] = result[0].values[0][i]);
+      const newCrisis = result[0];
       
       if (mainWindow && mainWindow.webContents && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send('crisis:new', newCrisis);
@@ -357,6 +369,13 @@ return;
           }
           
           const newNotification = handleNewNotification(notification);
+          
+          if (!newNotification) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Failed to create notification' }));
+            return;
+          }
+          
           const notificationId = newNotification.id;
           
           res.writeHead(201, { 'Content-Type': 'application/json' });
@@ -403,6 +422,13 @@ return;
           }
           
           const newCrisis = handleNewCrisis(crisis);
+          
+          if (!newCrisis) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Failed to create crisis' }));
+            return;
+          }
+          
           const crisisId = newCrisis.id;
           
           res.writeHead(201, { 'Content-Type': 'application/json' });
