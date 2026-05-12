@@ -19,7 +19,7 @@ export default function CrisisPanel({ crises }: CrisisPanelProps) {
         </div>
       </div>
       
-      <div className="flex-1 overflow-y-auto py-4 px-0 space-y-3 custom-scrollbar">
+      <div className="flex-1 py-4 px-0 space-y-3">
         {crises.length === 0 ? (
           <div className="text-center text-sm text-white/30 py-12">
             No active crises
