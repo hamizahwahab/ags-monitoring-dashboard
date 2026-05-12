@@ -5,8 +5,8 @@
   --asg-panel: #0d0d0d;
   --asg-card: #161616;
   
-  --critical-bg: #2D0A0A;
-  --critical-border: #FF0000;
+  --critical-bg: #000000;
+  --critical-border: #FFB800;
   
   --warning-bg: #2D1F0A;
   --warning-border: #FFB800;
