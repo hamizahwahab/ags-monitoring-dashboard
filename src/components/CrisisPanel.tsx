@@ -28,19 +28,12 @@ export default function CrisisPanel({ crises }: CrisisPanelProps) {
           crises.map((crisis) => (
             <div 
               key={crisis.id} 
-              className="p-3 rounded-lg bg-red-900/10 border border-red-500/30"
+              className="p-3 rounded-lg bg-red-700 border border-red-500"
             >
-              <div className="flex justify-between items-start mb-1">
-                <h3 className="text-sm font-bold text-red-400">{crisis.title}</h3>
-                <span className={`text-[10px] px-1.5 py-0.5 rounded uppercase font-bold ${
-                  crisis.severity === 'high' ? 'bg-red-600 text-white' : 
-                  crisis.severity === 'medium' ? 'bg-orange-500 text-white' : 
-                  'bg-yellow-500 text-black'
-                }`}>
-                  {crisis.severity}
-                </span>
+              <div className="mb-1">
+                <h3 className="text-sm font-bold text-white">{crisis.title}</h3>
               </div>
-              <p className="text-xs text-white/60 line-clamp-3">{crisis.description}</p>
+              <p className="text-xs text-white/80 line-clamp-3">{crisis.description}</p>
             </div>
           ))
         )}
