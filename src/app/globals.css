@@ -73,7 +73,7 @@ body {
 
 /* Vertical carousel for notifications */
 .notification-carousel {
-  animation: scroll-vertical 40s linear infinite;
+  animation: scroll-vertical 60s linear infinite;
 }
 
 .notification-carousel:hover {
