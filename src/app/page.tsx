@@ -7,7 +7,7 @@
 import { useState, useEffect, useRef } from 'react';
 import NotificationPanel from '@/components/NotificationPanel';
 import CrisisPanel from '@/components/CrisisPanel';
-import Siren, { playSiren } from '@/components/Siren';
+import { playSiren } from '@/components/Siren';
 import { API_URL, CRISIS_API_URL, API_CONFIG } from '@/config/api';
 import { Notification, Crisis } from '@/types';
 
@@ -149,7 +149,6 @@ useEffect(() => {
 
   return (
     <main className="flex flex-col h-screen bg-[#050505] text-white overflow-hidden select-none">
-      <Siren />
       
       <div className="flex flex-1 overflow-hidden">
         {/* CRISIS SIDEBAR (Left 25%) */}
