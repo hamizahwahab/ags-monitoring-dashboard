@@ -138,10 +138,6 @@ function handleNewNotification(notification) {
     const newNotification = result[0];
     
     if (mainWindow && mainWindow.webContents && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.once('did-finish-load', () => {
-        mainWindow.webContents.send('notification:new', newNotification);
-        mainWindow.webContents.send('notification:refresh');
-      });
       mainWindow.webContents.send('notification:new', newNotification);
       mainWindow.webContents.send('notification:refresh');
     } else {

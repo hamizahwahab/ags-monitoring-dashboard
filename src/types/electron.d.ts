@@ -1,23 +1,7 @@
 /// <reference types="next" />
 /// <reference types="next/image-types/global" />
 
-interface Notification {
-  id: number;
-  notification_id?: string;
-  title: string;
-  message: string;
-  priority: string;
-  created_at: string;
-}
-
-interface Crisis {
-  id: number;
-  title: string;
-  description: string;
-  severity: 'high' | 'medium' | 'low';
-  status: 'active' | 'resolved';
-  created_at: string;
-}
+import type { Notification, Crisis } from './index';
 
 interface ElectronAPI {
   getNotifications: () => Promise<Notification[]>;
@@ -30,6 +14,8 @@ interface ElectronAPI {
   getCrises: () => Promise<Crisis[]>;
   addCrisis: (crisis: { title: string; description: string; severity?: 'high' | 'medium' | 'low' }) => Promise<Crisis>;
   deleteCrisis: (id: number) => Promise<void>;
+  clearAllCrises: () => Promise<void>;
+  getCrisisById: (id: number) => Promise<Crisis | null>;
   onNewCrisis: (callback: (crisis: Crisis) => void) => void;
   onRefreshCrises: (callback: () => void) => void;
   removeNewCrisisListener: () => void;
@@ -40,3 +26,5 @@ declare global {
     electronAPI?: ElectronAPI;
   }
 }
+
+export {};

@@ -4,7 +4,7 @@
 
 /// <reference path="../types/electron.d.ts" />
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import NotificationPanel from '@/components/NotificationPanel';
 import CrisisPanel from '@/components/CrisisPanel';
 import { playSiren } from '@/components/Siren';
@@ -13,9 +13,7 @@ import { Notification, Crisis } from '@/types';
 
 export default function Home() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const lastFetchedIds = useRef<Set<number>>(new Set());
   const [crises, setCrises] = useState<Crisis[]>([]);
-  const lastFetchedCrisisIds = useRef<Set<number>>(new Set());
 
   // Fetch initial notifications
   const fetchNotifications = async () => {
@@ -36,9 +34,6 @@ export default function Home() {
       if (Array.isArray(data)) {
         newNotifications = data;
       }
-      
-      // Update last fetched IDs
-      newNotifications.forEach(n => lastFetchedIds.current.add(n.id));
       
       setNotifications(newNotifications);
       
@@ -66,9 +61,6 @@ export default function Home() {
       if (Array.isArray(data)) {
         newCrises = data;
       }
-      
-      // Update last fetched IDs
-      newCrises.forEach(c => lastFetchedCrisisIds.current.add(c.id));
       
       setCrises(newCrises);
       
@@ -142,6 +134,10 @@ useEffect(() => {
     return () => {
       if (pollInterval) {
         clearInterval(pollInterval);
+      }
+      if (typeof window !== 'undefined' && window.electronAPI) {
+        window.electronAPI.removeNewNotificationListener();
+        (window.electronAPI as any).removeNewCrisisListener();
       }
     };
 

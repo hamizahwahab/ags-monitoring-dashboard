@@ -48,9 +48,9 @@ curl -X POST http://localhost:8001/api/notifications \
 curl http://localhost:8001/api/notifications
 ```
 
-**Delete all notifications:**
+**Clear all notifications:**
 ```bash
-curl -X DELETE http://localhost:8001/api/notifications
+curl -X DELETE http://localhost:8001/api/notifications/all
 ```
 
 **Delete by ID:**
