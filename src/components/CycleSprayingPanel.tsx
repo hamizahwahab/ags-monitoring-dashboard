@@ -65,18 +65,18 @@ export default function CycleSprayingPanel() {
         CYCLE SPRAYING
       </h2>
 
-      <div className="flex-1 overflow-y-auto space-y-1.5 custom-scrollbar pr-1">
+      <div className="flex-1 overflow-y-auto grid grid-cols-3 gap-1.5 custom-scrollbar pr-1">
         {sorted.map((item, index) => (
           <div
             key={index}
-            className={`flex items-center justify-between px-3 py-2 rounded text-sm ${
+            className={`flex items-center justify-between px-2 py-1.5 rounded text-xs ${
               item.status === 'overdue'
                 ? 'bg-red-700/80 text-white'
                 : 'bg-yellow-600/80 text-white'
             }`}
           >
             <span className="font-semibold">{item.field}</span>
-            <span className="opacity-80">Plot {item.plot}</span>
+            <span className="opacity-80">P{item.plot}</span>
           </div>
         ))}
       </div>
