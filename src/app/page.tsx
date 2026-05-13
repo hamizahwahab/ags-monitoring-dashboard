@@ -147,14 +147,15 @@ useEffect(() => {
     <main className="flex flex-col h-screen bg-[#050505] text-white overflow-hidden select-none">
       
       <div className="flex flex-1 overflow-hidden">
-        {/* CRISIS SIDEBAR (Left 25%) */}
-        <aside className="w-[25%] flex flex-col bg-[#0d0d0d] border-r border-white/3 shadow-[10px_0_30px_rgba(0,0,0,0.5)]">
-          <CrisisPanel crises={crises} onResolveCrisis={onResolveCrisis} />
-        </aside>
+        {/* CRISIS SIDEBAR (Left) - hidden when no crises */}
+        {crises.length > 0 && (
+          <aside className="w-[25%] flex flex-col bg-[#0d0d0d] border-r border-white/3 shadow-[10px_0_30px_rgba(0,0,0,0.5)]">
+            <CrisisPanel crises={crises} onResolveCrisis={onResolveCrisis} />
+          </aside>
+        )}
         
-        {/* MAIN CONTENT (Center 50%) - Empty */}
-        <div className="w-[50%] bg-[#0a0a0a]">
-        </div>
+        {/* MAIN CONTENT - fills remaining space */}
+        <div className={crises.length > 0 ? 'w-[50%]' : 'w-[75%]'}></div>
         
         {/* NOTIFICATION SIDEBAR (Right 25%) */}
         <aside className="w-[25%] flex flex-col bg-[#0d0d0d] border-l border-white/3 shadow-[-10px_0_30px_rgba(0,0,0,0.5)]">
