@@ -1,0 +1,85 @@
+'use client';
+
+interface SprayingPlot {
+  field: string;
+  plot: string;
+  status: 'overdue' | 'pending';
+}
+
+// Hardcoded data from CYCLE SPRAYING SDP07.xlsx
+const plots: SprayingPlot[] = [
+  // Overdue (red) - more than 2 days
+  { field: '2021A', plot: '2', status: 'overdue' },
+  { field: '2021A', plot: '6', status: 'overdue' },
+  { field: '2021B', plot: '4', status: 'overdue' },
+  { field: '2021B', plot: '4', status: 'overdue' },
+  { field: '2021C', plot: '4', status: 'overdue' },
+  { field: '2021CA', plot: '4', status: 'overdue' },
+  { field: '2021CB', plot: '2', status: 'overdue' },
+  { field: '2021CC', plot: '4', status: 'overdue' },
+  { field: '2021D', plot: '4', status: 'overdue' },
+
+  // Pending (yellow) - less than 2 days
+  { field: '2022A', plot: '4', status: 'pending' },
+  { field: '2022A', plot: '4', status: 'pending' },
+  { field: '2022A', plot: '5', status: 'pending' },
+  { field: '2022A', plot: '5', status: 'pending' },
+  { field: '2022A', plot: '6', status: 'pending' },
+  { field: '2022B', plot: '4', status: 'pending' },
+  { field: '2022B', plot: '4', status: 'pending' },
+  { field: '2022B', plot: '6', status: 'pending' },
+  { field: '2022B', plot: '6', status: 'pending' },
+  { field: '2022B', plot: '11', status: 'pending' },
+  { field: '2022C', plot: '4', status: 'pending' },
+  { field: '2022C', plot: '5', status: 'pending' },
+  { field: '2022C', plot: '6', status: 'pending' },
+  { field: '2022C', plot: '6', status: 'pending' },
+  { field: '2022CA', plot: '2', status: 'pending' },
+  { field: '2022D', plot: '3', status: 'pending' },
+  { field: '2022D', plot: '4', status: 'pending' },
+  { field: '2022D', plot: '5', status: 'pending' },
+  { field: '2022D', plot: '5', status: 'pending' },
+  { field: '2022E', plot: '8', status: 'pending' },
+  { field: '2022E', plot: '8', status: 'pending' },
+  { field: '2023CA', plot: '0', status: 'pending' },
+  // Plots with no field name - treat as pending
+  { field: '-', plot: '18', status: 'pending' },
+  { field: '-', plot: '19', status: 'pending' },
+  { field: '-', plot: '19', status: 'pending' },
+  { field: '-', plot: '21', status: 'pending' },
+  { field: '-', plot: '28', status: 'pending' },
+  { field: '-', plot: '30', status: 'pending' },
+];
+
+export default function CycleSprayingPanel() {
+  // Sort: overdue (red) first, then pending (yellow)
+  const sorted = [...plots].sort((a, b) => {
+    if (a.status === 'overdue' && b.status !== 'overdue') return -1;
+    if (a.status !== 'overdue' && b.status === 'overdue') return 1;
+    return 0;
+  });
+
+  return (
+    <div className="h-full flex flex-col bg-[#0a0a0a] p-3">
+      <h2 className="text-base font-bold text-white/70 mb-3 border-b border-white/10 pb-2">
+        CYCLE SPRAYING
+      </h2>
+
+      <div className="flex-1 overflow-y-auto space-y-1.5 custom-scrollbar pr-1">
+        {sorted.map((item, index) => (
+          <div
+            key={index}
+            className={`flex items-center justify-between px-3 py-2 rounded text-sm ${
+              item.status === 'overdue'
+                ? 'bg-red-700/80 text-white'
+                : 'bg-yellow-600/80 text-white'
+            }`}
+          >
+            <span className="font-semibold">{item.field}</span>
+            <span className="opacity-80">Plot {item.plot}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

@@ -7,6 +7,7 @@
 import { useState, useEffect } from 'react';
 import NotificationPanel from '@/components/NotificationPanel';
 import CrisisPanel from '@/components/CrisisPanel';
+import CycleSprayingPanel from '@/components/CycleSprayingPanel';
 import { playSiren } from '@/components/Siren';
 import { API_URL, CRISIS_API_URL, API_CONFIG } from '@/config/api';
 import { Notification, Crisis } from '@/types';
@@ -154,8 +155,10 @@ useEffect(() => {
           </aside>
         )}
         
-        {/* MAIN CONTENT - fills remaining space */}
-        <div className={crises.length > 0 ? 'w-[50%]' : 'w-[75%]'}></div>
+        {/* MAIN CONTENT - Cycle Spraying */}
+        <div className={crises.length > 0 ? 'w-[50%]' : 'w-[75%]'}>
+          <CycleSprayingPanel />
+        </div>
         
         {/* NOTIFICATION SIDEBAR (Right 25%) */}
         <aside className="w-[25%] flex flex-col bg-[#0d0d0d] border-l border-white/3 shadow-[-10px_0_30px_rgba(0,0,0,0.5)]">
