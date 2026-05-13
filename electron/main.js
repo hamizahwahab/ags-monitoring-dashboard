@@ -358,9 +358,9 @@ return;
           }
           
           // Validate max length (prevent buffer overflow)
-          if (notification.title.length > 200 || notification.message.length > 1000) {
+          if (notification.title.length > 200 || notification.message.length > 200) {
             res.writeHead(400, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'Title or message too long' }));
+            res.end(JSON.stringify({ error: 'Title or message too long (max 200 chars)' }));
             return;
           }
           
@@ -414,6 +414,13 @@ return;
           if (!crisis.title || !crisis.description) {
             res.writeHead(400, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: 'Missing title or description' }));
+            return;
+          }
+          
+          // Validate max length (prevent buffer overflow)
+          if (crisis.title.length > 200 || crisis.description.length > 200) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Title or description too long (max 200 chars)' }));
             return;
           }
           
