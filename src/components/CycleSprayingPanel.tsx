@@ -52,12 +52,8 @@ const plots: SprayingPlot[] = [
 ];
 
 export default function CycleSprayingPanel() {
-  // Sort: overdue (red) first, then pending (yellow)
-  const sorted = [...plots].sort((a, b) => {
-    if (a.status === 'overdue' && b.status !== 'overdue') return -1;
-    if (a.status !== 'overdue' && b.status === 'overdue') return 1;
-    return 0;
-  });
+  const overdue = plots.filter(p => p.status === 'overdue');
+  const pending = plots.filter(p => p.status === 'pending');
 
   return (
     <div className="h-full flex flex-col bg-[#0a0a0a] p-3">
@@ -65,20 +61,36 @@ export default function CycleSprayingPanel() {
         CYCLE SPRAYING
       </h2>
 
-      <div className="flex-1 overflow-y-auto grid grid-cols-3 gap-1.5 custom-scrollbar pr-1">
-        {sorted.map((item, index) => (
-          <div
-            key={index}
-            className={`flex items-center justify-between px-2 py-1.5 rounded text-xs ${
-              item.status === 'overdue'
-                ? 'bg-red-700/80 text-white'
-                : 'bg-yellow-600/80 text-white'
-            }`}
-          >
-            <span className="font-semibold">{item.field}</span>
-            <span className="opacity-80">P{item.plot}</span>
+      <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 space-y-2">
+        {/* Overdue section (red) */}
+        {overdue.length > 0 && (
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(110px,1fr))] gap-1.5">
+            {overdue.map((item, index) => (
+              <div
+                key={`overdue-${index}`}
+                className="flex items-center justify-between px-2 py-1.5 rounded text-xs bg-red-700/80 text-white"
+              >
+                <span className="font-semibold">{item.field}</span>
+                <span className="opacity-80">P{item.plot}</span>
+              </div>
+            ))}
           </div>
-        ))}
+        )}
+
+        {/* Pending section (yellow) - always starts on a new line */}
+        {pending.length > 0 && (
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(110px,1fr))] gap-1.5">
+            {pending.map((item, index) => (
+              <div
+                key={`pending-${index}`}
+                className="flex items-center justify-between px-2 py-1.5 rounded text-xs bg-yellow-600/80 text-white"
+              >
+                <span className="font-semibold">{item.field}</span>
+                <span className="opacity-80">P{item.plot}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
