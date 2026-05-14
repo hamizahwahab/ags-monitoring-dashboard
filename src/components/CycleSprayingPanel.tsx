@@ -64,11 +64,11 @@ export default function CycleSprayingPanel() {
       <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 space-y-2">
         {/* Overdue section (red) */}
         {overdue.length > 0 && (
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(110px,1fr))] gap-1.5">
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(130px,1fr))] gap-1.5">
             {overdue.map((item, index) => (
               <div
                 key={`overdue-${index}`}
-                className="flex items-center justify-between px-2 py-1.5 rounded text-xs bg-red-700/80 text-white"
+                className="flex items-center justify-between gap-1 px-2 py-1.5 rounded text-xs bg-red-700/80 text-white"
               >
                 <span className="font-semibold">{item.field}</span>
                 <span className="opacity-80">P{item.plot}</span>
@@ -79,11 +79,11 @@ export default function CycleSprayingPanel() {
 
         {/* Pending section (yellow) - always starts on a new line */}
         {pending.length > 0 && (
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(110px,1fr))] gap-1.5">
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(130px,1fr))] gap-1.5">
             {pending.map((item, index) => (
               <div
                 key={`pending-${index}`}
-                className="flex items-center justify-between px-2 py-1.5 rounded text-xs bg-yellow-600/80 text-white"
+                className="flex items-center justify-between gap-1 px-2 py-1.5 rounded text-xs bg-yellow-600/80 text-white"
               >
                 <span className="font-semibold">{item.field}</span>
                 <span className="opacity-80">P{item.plot}</span>
