@@ -14,9 +14,6 @@ export default function CrisisPanel({ crises }: CrisisPanelProps) {
           </span>
           ACTIVE CRISES
         </h2>
-        <div className="text-[10px] text-white/40 mt-0.5">
-          {crises.length} active
-        </div>
       </div>
       
       <div className="flex-1 py-4 px-0 space-y-3">

@@ -49,14 +49,14 @@ export default function CycleSprayingPanel() {
   const pending = plots.filter(p => p.status === 'pending');
 
   return (
-    <div className="h-full flex flex-col bg-[#0a0a0a] p-3">
+    <div className="h-full flex flex-col bg-[#0a0a0a]">
       <div className="px-3 py-3 border-b border-white/10">
         <h2 className="text-base font-bold text-white/70">
           CYCLE SPRAYING
         </h2>
       </div>
 
-      <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 space-y-2">
+      <div className="flex-1 overflow-y-auto custom-scrollbar px-2 py-4 space-y-2">
         {/* Overdue section (red) */}
         {overdue.length > 0 && (
           <div className="grid grid-cols-[repeat(auto-fill,minmax(130px,1fr))] gap-1.5">
