@@ -88,3 +88,13 @@ body {
     transform: translateY(-50%);
   }
 }
+
+/* Blink animation for overdue cards */
+@keyframes blink-overdue {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.blink-overdue {
+  animation: blink-overdue 1.5s ease-in-out infinite;
+}

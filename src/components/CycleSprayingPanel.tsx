@@ -42,13 +42,6 @@ const plots: SprayingPlot[] = [
   { field: '2022E', plot: '8', status: 'pending' },
   { field: '2022E', plot: '8', status: 'pending' },
   { field: '2023CA', plot: '0', status: 'pending' },
-  // Plots with no field name - treat as pending
-  { field: '-', plot: '18', status: 'pending' },
-  { field: '-', plot: '19', status: 'pending' },
-  { field: '-', plot: '19', status: 'pending' },
-  { field: '-', plot: '21', status: 'pending' },
-  { field: '-', plot: '28', status: 'pending' },
-  { field: '-', plot: '30', status: 'pending' },
 ];
 
 export default function CycleSprayingPanel() {
@@ -68,7 +61,7 @@ export default function CycleSprayingPanel() {
             {overdue.map((item, index) => (
               <div
                 key={`overdue-${index}`}
-                className="flex items-center justify-between gap-1 px-2 py-1.5 rounded text-xs bg-red-700/80 text-white"
+                className="flex items-center justify-between gap-1 px-2 py-1.5 rounded text-xs bg-red-700/80 text-white blink-overdue"
               >
                 <span className="font-semibold">{item.field}</span>
                 <span className="opacity-80">P{item.plot}</span>
