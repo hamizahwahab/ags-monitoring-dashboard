@@ -138,6 +138,7 @@ function handleNewNotification(notification) {
     const newNotification = result[0];
     
     if (mainWindow && mainWindow.webContents && !mainWindow.isDestroyed()) {
+      console.log('[IPC] Sending notification:new', newNotification.id);
       mainWindow.webContents.send('notification:new', newNotification);
       mainWindow.webContents.send('notification:refresh');
     } else {
@@ -174,6 +175,7 @@ function handleNewCrisis(crisis) {
       const newCrisis = result[0];
       
       if (mainWindow && mainWindow.webContents && !mainWindow.isDestroyed()) {
+        console.log('[IPC] Sending crisis:new', newCrisis.id);
         mainWindow.webContents.send('crisis:new', newCrisis);
         mainWindow.webContents.send('crisis:refresh');
       }
