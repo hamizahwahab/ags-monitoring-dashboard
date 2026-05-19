@@ -114,6 +114,27 @@ function saveDatabase() {
   }
 }
 
+// Delete notifications older than 1 hour
+function cleanupExpiredNotifications() {
+  if (!db) return;
+  try {
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const stmt = db.prepare('DELETE FROM notifications WHERE created_at < ?');
+    stmt.run([oneHourAgo]);
+    stmt.free();
+    const changes = db.getRowsModified();
+    if (changes > 0) {
+      saveDatabase();
+      console.log(`Cleaned up ${changes} expired notification(s)`);
+      if (mainWindow && mainWindow.webContents && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('notification:refresh');
+      }
+    }
+  } catch (err) {
+    console.error('Error cleaning up expired notifications:', err);
+  }
+}
+
 // Save notification to database and notify renderer
 function handleNewNotification(notification) {
   const createdAt = new Date().toISOString();
@@ -242,6 +263,8 @@ return;
 
     // GET /api/notifications - Get all notifications
     if (req.method === 'GET' && url === '/api/notifications') {
+      // Clean up expired notifications before returning
+      cleanupExpiredNotifications();
       try {
         const results = db.exec('SELECT * FROM notifications ORDER BY created_at DESC');
         if (results.length === 0) {
@@ -636,6 +659,7 @@ return;
 
 function setupIPC() {
   ipcMain.handle('db:getNotifications', () => {
+    cleanupExpiredNotifications();
     const results = db.exec('SELECT * FROM notifications ORDER BY created_at DESC');
     if (results.length === 0) return [];
     
@@ -715,6 +739,10 @@ app.whenReady().then(async () => {
   setupIPC();
   startHttpServer();
   createWindow();
+
+  // Run notification cleanup every 5 minutes
+  setInterval(cleanupExpiredNotifications, 5 * 60 * 1000);
+  console.log('Notification auto-cleanup scheduled (every 5 min, expires after 1 hour)');
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
