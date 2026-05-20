@@ -260,7 +260,7 @@ X-API-Key: YOUR_API_KEY_HERE
 | DELETE   | `/api/crises/:id`              | Yes  | Resolve (soft-delete) crisis by ID  |
 | DELETE   | `/api/crises/all`              | Yes  | Clear all crises                    |
 
-Full API documentation with request/response examples and Dart code samples is available in [`API_DOCUMENTATION.md`](./docs/API_DOCUMENTATION.md).
+Full API documentation with request/response examples and cURL commands is available in [`API_DOCUMENTATION.md`](./API_DOCUMENTATION.md).
 
 ---
 
