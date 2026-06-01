@@ -47,14 +47,23 @@ async function createWindow() {
   });
   
   // Set Content Security Policy
+  // NOTE: Skip CSP for file:// requests because Chromium's site isolation
+  // crashes with a CHECK failure when CSP is applied to opaque origins (file://).
+  // All our requests go to localhost:8001 which only accepts valid API keys
+  // for write operations. Read operations are unrestricted for display purposes.
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    if (details.url.startsWith('file://')) {
+      callback({ responseHeaders: details.responseHeaders });
+      return;
+    }
+
     const cspSources = [
       "default-src 'self'",
       `script-src 'self'${isDevMode ? " 'unsafe-inline' 'unsafe-eval'" : ''}`,
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data:",
       "font-src 'self'",
-      `connect-src 'self'${isDevMode ? ' http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:* wss://localhost:* wss://127.0.0.1:*' : ''}`,
+      `connect-src 'self' http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:* wss://localhost:* wss://127.0.0.1:*`,
     ].join('; ');
 
     callback({
@@ -97,6 +106,17 @@ async function initDatabase() {
       description TEXT NOT NULL,
       severity TEXT DEFAULT 'high',
       status TEXT DEFAULT 'active',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  
+  // Cycle spraying table
+  db.run(`
+    CREATE TABLE IF NOT EXISTS cycle_spraying (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      field TEXT NOT NULL,
+      plot TEXT NOT NULL,
+      status TEXT DEFAULT 'pending',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
@@ -203,6 +223,42 @@ function handleNewCrisis(crisis) {
     }
   } catch (err) {
     console.error('Error saving crisis:', err);
+  }
+  return null;
+}
+
+// Save cycle spraying plot to database and notify renderer
+function handleNewSprayingPlot(plot) {
+  try {
+    const createdAt = new Date().toISOString();
+    const stmt = db.prepare('INSERT INTO cycle_spraying (field, plot, status, created_at) VALUES (?, ?, ?, ?)');
+    stmt.run([plot.field, plot.plot, plot.status || 'pending', createdAt]);
+    stmt.free();
+    
+    const lastId = db.exec('SELECT last_insert_rowid()')[0].values[0][0];
+    
+    const fetchStmt = db.prepare('SELECT * FROM cycle_spraying WHERE id = ?');
+    fetchStmt.bind([lastId]);
+    const result = [];
+    while (fetchStmt.step()) {
+      result.push(fetchStmt.getAsObject());
+    }
+    fetchStmt.free();
+    
+    saveDatabase();
+    
+    if (result.length > 0) {
+      const newPlot = result[0];
+      
+      if (mainWindow && mainWindow.webContents && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('cycle-spraying:new', newPlot);
+        mainWindow.webContents.send('cycle-spraying:refresh');
+      }
+      
+      return newPlot;
+    }
+  } catch (err) {
+    console.error('Error saving cycle spraying plot:', err);
   }
   return null;
 }
@@ -642,6 +698,168 @@ return;
       return;
     }
     
+    // GET /api/cycle-spraying - Get all cycle spraying plots
+    if (req.method === 'GET' && url === '/api/cycle-spraying') {
+      try {
+        const results = db.exec('SELECT * FROM cycle_spraying ORDER BY field ASC, plot ASC');
+        if (results.length === 0) {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify([]));
+          return;
+        }
+        
+        const columns = results[0].columns;
+        const plots = results[0].values.map(row => {
+          const obj = {};
+          columns.forEach((col, i) => obj[col] = row[i]);
+          return obj;
+        });
+        
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(plots));
+      } catch (err) {
+        console.error('Error fetching cycle spraying plots:', err);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Failed to fetch cycle spraying plots' }));
+      }
+      return;
+    }
+
+    // POST /api/cycle-spraying - Add new cycle spraying plot
+    if (req.method === 'POST' && url === '/api/cycle-spraying') {
+      if (!isValidApiKey(req)) {
+        res.writeHead(401, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Unauthorized' }));
+        return;
+      }
+      
+      let body = '';
+      
+      req.on('data', chunk => {
+        body += chunk.toString();
+      });
+      
+      req.on('end', () => {
+        try {
+          const plot = JSON.parse(body);
+          
+          if (!plot.field || !plot.plot) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Missing field or plot' }));
+            return;
+          }
+          
+          if (plot.field.length > 200 || plot.plot.length > 200) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Field or plot too long (max 200 chars)' }));
+            return;
+          }
+          
+          const newPlot = handleNewSprayingPlot(plot);
+          
+          if (!newPlot) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Failed to create cycle spraying plot' }));
+            return;
+          }
+          
+          res.writeHead(201, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ 
+            success: true, 
+            id: newPlot.id,
+            message: 'Cycle spraying plot created successfully'
+          }));
+          
+          console.log('New cycle spraying plot:', plot.field, plot.plot);
+          
+        } catch (err) {
+          console.error('Error creating cycle spraying plot:', err);
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid JSON' }));
+        }
+      });
+      return;
+    }
+
+    // DELETE /api/cycle-spraying/all - Clear all cycle spraying plots
+    if (req.method === 'DELETE' && url === '/api/cycle-spraying/all') {
+      if (!isValidApiKey(req)) {
+        res.writeHead(401, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Unauthorized' }));
+        return;
+      }
+      
+      try {
+        db.run('DELETE FROM cycle_spraying');
+        saveDatabase();
+        
+        if (mainWindow && mainWindow.webContents && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('cycle-spraying:refresh');
+        }
+        
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, message: 'All cycle spraying plots cleared' }));
+      } catch (err) {
+        console.error('Error clearing cycle spraying plots:', err);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Failed to clear cycle spraying plots' }));
+      }
+      return;
+    }
+
+    // DELETE /api/cycle-spraying/:id - Delete specific cycle spraying plot
+    if (req.method === 'DELETE' && url.startsWith('/api/cycle-spraying/')) {
+      if (!isValidApiKey(req)) {
+        res.writeHead(401, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Unauthorized' }));
+        return;
+      }
+      
+      const idStr = url.split('/api/cycle-spraying/')[1];
+      const id = parseInt(idStr);
+      
+      if (isNaN(id) || id <= 0 || !Number.isInteger(id)) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Invalid ID' }));
+        return;
+      }
+      
+      try {
+        const checkStmt = db.prepare('SELECT id FROM cycle_spraying WHERE id = ?');
+        checkStmt.bind([id]);
+        const exists = checkStmt.step();
+        checkStmt.free();
+        
+        if (!exists) {
+          res.writeHead(404, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Cycle spraying plot not found' }));
+          return;
+        }
+        
+        db.run('DELETE FROM cycle_spraying WHERE id = ?', [id]);
+        const changes = db.getRowsModified();
+        
+        if (changes > 0) {
+          saveDatabase();
+          
+          if (mainWindow && mainWindow.webContents && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('cycle-spraying:refresh');
+          }
+          
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: true, message: `Cycle spraying plot ${id} deleted` }));
+        } else {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Failed to delete cycle spraying plot' }));
+        }
+      } catch (err) {
+        console.error('Error deleting cycle spraying plot:', err);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Failed to delete cycle spraying plot' }));
+      }
+      return;
+    }
+
     // 404 for unknown routes
     res.writeHead(404, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: 'Not found' }));
@@ -723,6 +941,38 @@ function setupIPC() {
   ipcMain.handle('db:clearAll', () => {
     db.run('DELETE FROM notifications');
     saveDatabase();
+  });
+
+  ipcMain.handle('db:getCycleSpraying', () => {
+    const results = db.exec('SELECT * FROM cycle_spraying ORDER BY field ASC, plot ASC');
+    if (results.length === 0) return [];
+    
+    const columns = results[0].columns;
+    return results[0].values.map(row => {
+      const obj = {};
+      columns.forEach((col, i) => obj[col] = row[i]);
+      return obj;
+    });
+  });
+
+  ipcMain.handle('db:addSprayingPlot', (event, plot) => {
+    return handleNewSprayingPlot(plot);
+  });
+
+  ipcMain.handle('db:deleteSprayingPlot', (event, id) => {
+    db.run('DELETE FROM cycle_spraying WHERE id = ?', [id]);
+    saveDatabase();
+    if (mainWindow && mainWindow.webContents && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('cycle-spraying:refresh');
+    }
+  });
+
+  ipcMain.handle('db:clearAllSprayingPlots', () => {
+    db.run('DELETE FROM cycle_spraying');
+    saveDatabase();
+    if (mainWindow && mainWindow.webContents && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('cycle-spraying:refresh');
+    }
   });
   
   // Get server info

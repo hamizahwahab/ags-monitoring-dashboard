@@ -1,6 +1,6 @@
 # ASG Monitoring Dashboard — API Reference
 
-> Base URL: `http://192.168.68.122:8001`
+> Base URL: `http://192.168.68.69:8001`
 >
 > All requests and responses use `application/json`.
 
@@ -23,8 +23,13 @@
    - [POST /api/crises](#post-apicrises)
    - [DELETE /api/crises/:id](#delete-apicrisesid)
    - [DELETE /api/crises/all](#delete-apicrisesall)
-6. [Status Codes](#status-codes)
-7. [Database Notes](#database-notes)
+6. [Cycle Spraying API](#cycle-spraying-api)
+   - [GET /api/cycle-spraying](#get-apicycle-spraying)
+   - [POST /api/cycle-spraying](#post-apicycle-spraying)
+   - [DELETE /api/cycle-spraying/:id](#delete-apicycle-sprayingid)
+   - [DELETE /api/cycle-spraying/all](#delete-apicycle-sprayingall)
+7. [Status Codes](#status-codes)
+8. [Database Notes](#database-notes)
 
 ---
 
@@ -161,7 +166,7 @@ Retrieve a single notification by its numeric ID.
 #### cURL Example
 
 ```bash
-curl -X GET "http://192.168.68.122:8001/api/notifications/1"
+curl -X GET "http://192.168.68.69:8001/api/notifications/1"
 ```
 
 ---
@@ -233,7 +238,7 @@ Push a new notification.
 #### cURL Example
 
 ```bash
-curl -X POST "http://192.168.68.122:8001/api/notifications" \
+curl -X POST "http://192.168.68.69:8001/api/notifications" \
   -H "X-API-Key: YOUR_API_KEY_HERE" \
   -H "Content-Type: application/json" \
   -d '{
@@ -291,7 +296,7 @@ Delete a single notification by its numeric ID.
 #### cURL Example
 
 ```bash
-curl -X DELETE "http://192.168.68.122:8001/api/notifications/42" \
+curl -X DELETE "http://192.168.68.69:8001/api/notifications/42" \
   -H "X-API-Key: YOUR_API_KEY_HERE"
 ```
 
@@ -327,7 +332,7 @@ Remove every notification from the database.
 #### cURL Example
 
 ```bash
-curl -X DELETE "http://192.168.68.122:8001/api/notifications/all" \
+curl -X DELETE "http://192.168.68.69:8001/api/notifications/all" \
   -H "X-API-Key: YOUR_API_KEY_HERE"
 ```
 
@@ -414,7 +419,7 @@ Retrieve a single crisis by its numeric ID.
 #### cURL Example
 
 ```bash
-curl -X GET "http://192.168.68.122:8001/api/crises/1"
+curl -X GET "http://192.168.68.69:8001/api/crises/1"
 ```
 
 ---
@@ -486,7 +491,7 @@ Report a new active crisis.
 #### cURL Example
 
 ```bash
-curl -X POST "http://192.168.68.122:8001/api/crises" \
+curl -X POST "http://192.168.68.69:8001/api/crises" \
   -H "X-API-Key: YOUR_API_KEY_HERE" \
   -H "Content-Type: application/json" \
   -d '{
@@ -544,7 +549,7 @@ Resolve a single crisis by its numeric ID. The crisis is removed from the active
 #### cURL Example
 
 ```bash
-curl -X DELETE "http://192.168.68.122:8001/api/crises/7" \
+curl -X DELETE "http://192.168.68.69:8001/api/crises/7" \
   -H "X-API-Key: YOUR_API_KEY_HERE"
 ```
 
@@ -580,7 +585,213 @@ Resolve (remove) every active crisis.
 #### cURL Example
 
 ```bash
-curl -X DELETE "http://192.168.68.122:8001/api/crises/all" \
+curl -X DELETE "http://192.168.68.69:8001/api/crises/all" \
+  -H "X-API-Key: YOUR_API_KEY_HERE"
+```
+
+---
+
+## Cycle Spraying API
+
+Cycle spraying plots represent field/plot pairs that require monitoring. Plots can have a status of `overdue` (red, blinking) or `pending` (yellow, solid).
+
+### GET /api/cycle-spraying
+
+Retrieve all cycle spraying plots, ordered by field and plot.
+
+- **Auth:** None
+- **Method:** GET
+- **URL:** `/api/cycle-spraying`
+
+#### Responses
+
+**200 OK**
+
+```json
+[
+  {
+    "id": 1,
+    "field": "2021A",
+    "plot": "2",
+    "status": "overdue",
+    "created_at": "2026-05-20T10:30:00Z"
+  },
+  {
+    "id": 2,
+    "field": "2022B",
+    "plot": "4",
+    "status": "pending",
+    "created_at": "2026-05-20T10:28:00Z"
+  }
+]
+```
+
+Returns an empty array `[]` if there are no plots.
+
+#### cURL Example
+
+```bash
+curl -X GET "http://192.168.68.69:8001/api/cycle-spraying"
+```
+
+---
+
+### POST /api/cycle-spraying
+
+Add a new cycle spraying plot.
+
+- **Auth:** Required (`X-API-Key`)
+- **Method:** POST
+- **URL:** `/api/cycle-spraying`
+
+#### Request Body
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `field` | string | Yes | — | Field identifier (max 200 chars) |
+| `plot` | string | Yes | — | Plot identifier (max 200 chars) |
+| `status` | string | No | `"pending"` | One of: `"overdue"`, `"pending"` |
+
+#### Responses
+
+**201 Created**
+
+```json
+{
+  "success": true,
+  "id": 42,
+  "message": "Cycle spraying plot created successfully"
+}
+```
+
+**400 Bad Request**
+
+```json
+{ "error": "Missing field or plot" }
+```
+
+```json
+{ "error": "Field or plot too long (max 200 chars)" }
+```
+
+```json
+{ "error": "Invalid JSON" }
+```
+
+**401 Unauthorized**
+
+```json
+{ "error": "Unauthorized" }
+```
+
+**500 Internal Server Error**
+
+```json
+{ "error": "Failed to create cycle spraying plot" }
+```
+
+#### cURL Example
+
+```bash
+curl -X POST "http://192.168.68.69:8001/api/cycle-spraying" \
+  -H "X-API-Key: YOUR_API_KEY_HERE" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "field": "2021A",
+    "plot": "2",
+    "status": "overdue"
+  }'
+```
+
+---
+
+### DELETE /api/cycle-spraying/:id
+
+Delete a single cycle spraying plot by its numeric ID.
+
+- **Auth:** Required (`X-API-Key`)
+- **Method:** DELETE
+- **URL:** `/api/cycle-spraying/{id}`
+
+#### Responses
+
+**200 OK**
+
+```json
+{
+  "success": true,
+  "message": "Cycle spraying plot 42 deleted"
+}
+```
+
+**400 Bad Request**
+
+```json
+{ "error": "Invalid ID" }
+```
+
+**401 Unauthorized**
+
+```json
+{ "error": "Unauthorized" }
+```
+
+**404 Not Found**
+
+```json
+{ "error": "Cycle spraying plot not found" }
+```
+
+**500 Internal Server Error**
+
+```json
+{ "error": "Failed to delete cycle spraying plot" }
+```
+
+#### cURL Example
+
+```bash
+curl -X DELETE "http://192.168.68.69:8001/api/cycle-spraying/42" \
+  -H "X-API-Key: YOUR_API_KEY_HERE"
+```
+
+---
+
+### DELETE /api/cycle-spraying/all
+
+Remove every cycle spraying plot from the database.
+
+- **Auth:** Required (`X-API-Key`)
+- **Method:** DELETE
+- **URL:** `/api/cycle-spraying/all`
+
+#### Responses
+
+**200 OK**
+
+```json
+{
+  "success": true,
+  "message": "All cycle spraying plots cleared"
+}
+```
+
+**401 Unauthorized**
+
+```json
+{ "error": "Unauthorized" }
+```
+
+**500 Internal Server Error**
+
+```json
+{ "error": "Failed to clear cycle spraying plots" }
+```
+
+#### cURL Example
+
+```bash
+curl -X DELETE "http://192.168.68.69:8001/api/cycle-spraying/all" \
   -H "X-API-Key: YOUR_API_KEY_HERE"
 ```
 
@@ -595,7 +806,7 @@ curl -X DELETE "http://192.168.68.122:8001/api/crises/all" \
 | 204 | No Content | Preflight checks / OPTIONS requests |
 | 400 | Bad Request | Missing fields, invalid JSON, non-numeric ID, or character limit exceeded |
 | 401 | Unauthorized | Missing or incorrect `X-API-Key` header |
-| 404 | Not Found | Notification or crisis ID does not exist |
+| 404 | Not Found | Notification, crisis, or cycle spraying ID does not exist |
 | 500 | Internal Server Error | Unexpected server-side failure |
 
 ---
@@ -605,5 +816,7 @@ curl -X DELETE "http://192.168.68.122:8001/api/crises/all" \
 - The dashboard uses a **SQLite** database that is **auto-created** on first run.
 - The `notifications` table stores: `id`, `title`, `message`, `priority`, `status`, `created_at`.
 - The `crises` table stores: `id`, `title`, `description`, `severity`, `status`, `created_at`.
+- The `cycle_spraying` table stores: `id`, `field`, `plot`, `status`, `created_at`.
 - Notifications are **automatically deleted after 1 hour** from their `created_at` timestamp.
 - Crises persist until explicitly resolved via the DELETE endpoints.
+- Cycle spraying plots persist until explicitly deleted via the DELETE endpoints.

@@ -30,4 +30,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.removeAllListeners('crisis:new');
     ipcRenderer.removeAllListeners('crisis:refresh');
   },
+  getCycleSpraying: () => ipcRenderer.invoke('db:getCycleSpraying'),
+  addSprayingPlot: (plot) => ipcRenderer.invoke('db:addSprayingPlot', plot),
+  deleteSprayingPlot: (id) => ipcRenderer.invoke('db:deleteSprayingPlot', id),
+  clearAllSprayingPlots: () => ipcRenderer.invoke('db:clearAllSprayingPlots'),
+  onNewSprayingPlot: (callback) => {
+    ipcRenderer.on('cycle-spraying:new', (event, plot) => callback(plot));
+  },
+  onRefreshSprayingPlots: (callback) => {
+    ipcRenderer.on('cycle-spraying:refresh', () => callback());
+  },
+  removeNewSprayingPlotListener: () => {
+    ipcRenderer.removeAllListeners('cycle-spraying:new');
+    ipcRenderer.removeAllListeners('cycle-spraying:refresh');
+  },
 });

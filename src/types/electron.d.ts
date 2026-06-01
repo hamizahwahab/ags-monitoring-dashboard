@@ -1,7 +1,7 @@
 /// <reference types="next" />
 /// <reference types="next/image-types/global" />
 
-import type { Notification, Crisis } from './index';
+import type { Notification, Crisis, SprayingPlot } from './index';
 
 interface ElectronAPI {
   getNotifications: () => Promise<Notification[]>;
@@ -19,6 +19,13 @@ interface ElectronAPI {
   onNewCrisis: (callback: (crisis: Crisis) => void) => void;
   onRefreshCrises: (callback: () => void) => void;
   removeNewCrisisListener: () => void;
+  getCycleSpraying: () => Promise<SprayingPlot[]>;
+  addSprayingPlot: (plot: { field: string; plot: string; status?: 'overdue' | 'pending' }) => Promise<SprayingPlot>;
+  deleteSprayingPlot: (id: number) => Promise<void>;
+  clearAllSprayingPlots: () => Promise<void>;
+  onNewSprayingPlot: (callback: (plot: SprayingPlot) => void) => void;
+  onRefreshSprayingPlots: (callback: () => void) => void;
+  removeNewSprayingPlotListener: () => void;
 }
 
 declare global {

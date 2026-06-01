@@ -16,55 +16,41 @@ export default function Home() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [crises, setCrises] = useState<Crisis[]>([]);
 
-  // Fetch initial notifications
+  // Fetch initial notifications (IPC first, HTTP fallback)
   const fetchNotifications = async () => {
     try {
-      const response = await fetch(API_URL, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      if (!response.ok) return;
-      
-      const data = await response.json();
-      
-      let newNotifications: Notification[] = [];
-      
-      if (Array.isArray(data)) {
-        newNotifications = data;
+      if (typeof window !== 'undefined' && window.electronAPI) {
+        const data = await window.electronAPI.getNotifications();
+        setNotifications(data || []);
+      } else {
+        const response = await fetch(API_URL, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        if (!response.ok) return;
+        const data = await response.json();
+        setNotifications(Array.isArray(data) ? data : []);
       }
-      
-      setNotifications(newNotifications);
-      
     } catch (err) {
       console.log('Fetching notifications:', err);
     }
   };
 
-  // Fetch initial crises
+  // Fetch initial crises (IPC first, HTTP fallback)
   const fetchCrises = async () => {
     try {
-      const response = await fetch(CRISIS_API_URL, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      if (!response.ok) return;
-      
-      const data = await response.json();
-      
-      let newCrises: Crisis[] = [];
-      
-      if (Array.isArray(data)) {
-        newCrises = data;
+      if (typeof window !== 'undefined' && window.electronAPI) {
+        const data = await window.electronAPI.getCrises();
+        setCrises(data || []);
+      } else {
+        const response = await fetch(CRISIS_API_URL, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        if (!response.ok) return;
+        const data = await response.json();
+        setCrises(Array.isArray(data) ? data : []);
       }
-      
-      setCrises(newCrises);
-      
     } catch (err) {
       console.log('Fetching crises:', err);
     }

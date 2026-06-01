@@ -27,6 +27,14 @@ export interface CrisisPanelProps {
   onResolveCrisis: (id: number) => void;
 }
 
+export interface SprayingPlot {
+  id: number;
+  field: string;
+  plot: string;
+  status: 'overdue' | 'pending';
+  created_at: string;
+}
+
 export interface NotificationCardProps {
   id?: string;
   title: string;
