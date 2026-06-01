@@ -340,7 +340,7 @@ curl -X DELETE "http://192.168.68.69:8001/api/notifications/all" \
 
 ## Crises API
 
-Crises represent ongoing incidents that remain active until explicitly resolved.
+Crises represent ongoing incidents that remain active until explicitly deleted.
 
 ### GET /api/crises
 
@@ -505,7 +505,7 @@ curl -X POST "http://192.168.68.69:8001/api/crises" \
 
 ### DELETE /api/crises/:id
 
-Resolve a single crisis by its numeric ID. The crisis is removed from the active list.
+Permanently delete a single crisis by its numeric ID (hard delete). The crisis is removed from the active list.
 
 - **Auth:** Required (`X-API-Key`)
 - **Method:** DELETE
@@ -518,7 +518,7 @@ Resolve a single crisis by its numeric ID. The crisis is removed from the active
 ```json
 {
   "success": true,
-  "message": "Crisis resolved successfully"
+  "message": "Crisis deleted successfully"
 }
 ```
 
@@ -557,7 +557,7 @@ curl -X DELETE "http://192.168.68.69:8001/api/crises/7" \
 
 ### DELETE /api/crises/all
 
-Resolve (remove) every active crisis.
+Delete every crisis from the database (hard delete).
 
 - **Auth:** Required (`X-API-Key`)
 - **Method:** DELETE
@@ -570,7 +570,7 @@ Resolve (remove) every active crisis.
 ```json
 {
   "success": true,
-  "message": "All crises resolved successfully"
+  "message": "All crises deleted successfully"
 }
 ```
 
@@ -818,5 +818,5 @@ curl -X DELETE "http://192.168.68.69:8001/api/cycle-spraying/all" \
 - The `crises` table stores: `id`, `title`, `description`, `severity`, `status`, `created_at`.
 - The `cycle_spraying` table stores: `id`, `field`, `plot`, `status`, `created_at`.
 - Notifications are **automatically deleted after 1 hour** from their `created_at` timestamp.
-- Crises persist until explicitly resolved via the DELETE endpoints.
+- Crises persist until explicitly deleted via the DELETE endpoints.
 - Cycle spraying plots persist until explicitly deleted via the DELETE endpoints.

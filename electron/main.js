@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const { app, BrowserWindow, ipcMain, session } = require('electron');
 const path = require('path');
 const fs = require('fs');
@@ -7,11 +9,12 @@ const initSqlJs = require('sql.js');
 let mainWindow;
 let db;
 let dbPath;
+let pushCounter = 0; // Incremented on every IPC push for debugging
 
 // Check if running in dev mode (passed via command line)
 const isDevMode = process.argv.includes('--dev');
 const HTTP_PORT = 8001;
-const API_KEY = process.env.API_KEY || 'ASG-DASHBOARD-2024'; // Use env var or default
+const API_KEY = process.env.API_KEY || 'AGS-DASHBOARD-2026'; // Use env var or default
 
 // Helper to check API key
 function isValidApiKey(req) {
@@ -145,7 +148,8 @@ function cleanupExpiredNotifications() {
     const changes = db.getRowsModified();
     if (changes > 0) {
       saveDatabase();
-      console.log(`Cleaned up ${changes} expired notification(s)`);
+      const ts = new Date().toISOString();
+      console.log(`[CLEANUP] ${ts} Cleaned up ${changes} expired notification(s) — sending refresh`);
       if (mainWindow && mainWindow.webContents && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send('notification:refresh');
       }
@@ -179,10 +183,14 @@ function handleNewNotification(notification) {
     const newNotification = result[0];
     
     if (mainWindow && mainWindow.webContents && !mainWindow.isDestroyed()) {
+      pushCounter++;
+      const ts = new Date().toISOString();
+      console.log(`[PUSH-#${pushCounter}] ${ts} Sending notification:new (id=${newNotification.id}, title="${notification.title}")`);
       mainWindow.webContents.send('notification:new', newNotification);
       mainWindow.webContents.send('notification:refresh');
+      console.log(`[PUSH-#${pushCounter}] ${ts} Sending notification:refresh`);
     } else {
-      console.log('MainWindow not ready, notification saved to DB only');
+      console.log(`[IPC-DEBUG] ${new Date().toISOString()} MainWindow not ready, notification saved to DB only`);
     }
     
     return newNotification;
@@ -215,8 +223,12 @@ function handleNewCrisis(crisis) {
       const newCrisis = result[0];
       
       if (mainWindow && mainWindow.webContents && !mainWindow.isDestroyed()) {
+        pushCounter++;
+        const ts = new Date().toISOString();
+        console.log(`[PUSH-#${pushCounter}] ${ts} Sending crisis:new (id=${newCrisis.id}, title="${crisis.title}")`);
         mainWindow.webContents.send('crisis:new', newCrisis);
         mainWindow.webContents.send('crisis:refresh');
+        console.log(`[PUSH-#${pushCounter}] ${ts} Sending crisis:refresh`);
       }
       
       return newCrisis;
@@ -251,8 +263,12 @@ function handleNewSprayingPlot(plot) {
       const newPlot = result[0];
       
       if (mainWindow && mainWindow.webContents && !mainWindow.isDestroyed()) {
+        pushCounter++;
+        const ts = new Date().toISOString();
+        console.log(`[PUSH-#${pushCounter}] ${ts} Sending cycle-spraying:new (id=${newPlot.id}, field="${plot.field}", plot="${plot.plot}")`);
         mainWindow.webContents.send('cycle-spraying:new', newPlot);
         mainWindow.webContents.send('cycle-spraying:refresh');
+        console.log(`[PUSH-#${pushCounter}] ${ts} Sending cycle-spraying:refresh`);
       }
       
       return newPlot;
@@ -460,7 +476,7 @@ return;
             message: 'Notification created successfully'
           }));
           
-          console.log('New notification received:', notification.title);
+          console.log(`[HTTP] ${new Date().toISOString()} POST /api/notifications - title="${notification.title}", message="${notification.message}"`);
           
         } catch (err) {
           console.error('Error creating notification:', err);
@@ -520,7 +536,7 @@ return;
             message: 'Crisis created successfully'
           }));
           
-          console.log('New crisis received:', crisis.title);
+          console.log(`[HTTP] ${new Date().toISOString()} POST /api/crises - title="${crisis.title}", description="${crisis.description}"`);
           
         } catch (err) {
           console.log('Error creating crisis:', err);
@@ -531,7 +547,7 @@ return;
 return;
     }
     
-    // DELETE /api/crises/:id - Resolve specific crisis
+    // DELETE /api/crises/:id - Delete specific crisis
     if (req.method === 'DELETE' && url.startsWith('/api/crises/')) {
       // Check API key
       if (!isValidApiKey(req)) {
@@ -567,7 +583,7 @@ return;
             return;
           }
           
-          db.run('UPDATE crises SET status = \'resolved\' WHERE id = ?', [id]);
+          db.run('DELETE FROM crises WHERE id = ?', [id]);
           saveDatabase();
           
           if (mainWindow && mainWindow.webContents && !mainWindow.isDestroyed()) {
@@ -575,11 +591,11 @@ return;
           }
           
           res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ success: true, message: `Crisis ${id} resolved` }));
+          res.end(JSON.stringify({ success: true, message: `Crisis ${id} deleted` }));
         } catch (err) {
-          console.error('Error resolving crisis:', err);
+          console.error('Error deleting crisis:', err);
           res.writeHead(500, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'Failed to resolve crisis' }));
+          res.end(JSON.stringify({ error: 'Failed to delete crisis' }));
         }
         return;
       }
@@ -770,7 +786,7 @@ return;
             message: 'Cycle spraying plot created successfully'
           }));
           
-          console.log('New cycle spraying plot:', plot.field, plot.plot);
+          console.log(`[HTTP] ${new Date().toISOString()} POST /api/cycle-spraying - field="${plot.field}", plot="${plot.plot}"`);
           
         } catch (err) {
           console.error('Error creating cycle spraying plot:', err);
@@ -877,6 +893,8 @@ return;
 
 function setupIPC() {
   ipcMain.handle('db:getNotifications', () => {
+    const ts = new Date().toISOString();
+    console.log(`[IPC-HANDLER] ${ts} Renderer called db:getNotifications`);
     cleanupExpiredNotifications();
     const results = db.exec('SELECT * FROM notifications ORDER BY created_at DESC');
     if (results.length === 0) return [];
@@ -890,6 +908,8 @@ function setupIPC() {
   });
   
   ipcMain.handle('db:getCrises', () => {
+    const ts = new Date().toISOString();
+    console.log(`[IPC-HANDLER] ${ts} Renderer called db:getCrises`);
     const results = db.exec('SELECT * FROM crises WHERE status = \'active\' ORDER BY created_at DESC');
     if (results.length === 0) return [];
     
@@ -926,7 +946,7 @@ function setupIPC() {
   });
 
   ipcMain.handle('db:deleteCrisis', (event, id) => {
-    db.run(`UPDATE crises SET status = 'resolved' WHERE id = ?`, [id]);
+    db.run('DELETE FROM crises WHERE id = ?', [id]);
     saveDatabase();
     if (mainWindow && mainWindow.webContents && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('crisis:refresh');
@@ -944,6 +964,8 @@ function setupIPC() {
   });
 
   ipcMain.handle('db:getCycleSpraying', () => {
+    const ts = new Date().toISOString();
+    console.log(`[IPC-HANDLER] ${ts} Renderer called db:getCycleSpraying`);
     const results = db.exec('SELECT * FROM cycle_spraying ORDER BY field ASC, plot ASC');
     if (results.length === 0) return [];
     
@@ -989,6 +1011,12 @@ app.whenReady().then(async () => {
   setupIPC();
   startHttpServer();
   createWindow();
+
+  // Log API key source (don't log the actual key for security)
+  const keySource = process.env.API_KEY ? '.env file / system env' : 'default (AGS-DASHBOARD-2026)';
+  console.log(`[STARTUP] ${new Date().toISOString()} API key source: ${keySource}`);
+  console.log(`[STARTUP] ${new Date().toISOString()} dbPath: ${dbPath}`);
+  console.log(`[STARTUP] ${new Date().toISOString()} isDevMode: ${isDevMode}`);
 
   // Run notification cleanup every 5 minutes
   setInterval(cleanupExpiredNotifications, 5 * 60 * 1000);

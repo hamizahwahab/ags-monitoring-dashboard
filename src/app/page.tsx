@@ -19,10 +19,14 @@ export default function Home() {
   // Fetch initial notifications (IPC first, HTTP fallback)
   const fetchNotifications = async () => {
     try {
+      const ts = new Date().toISOString();
       if (typeof window !== 'undefined' && window.electronAPI) {
+        console.log(`[RENDERER-IPC] ${ts} Fetching notifications via IPC...`);
         const data = await window.electronAPI.getNotifications();
         setNotifications(data || []);
+        console.log(`[RENDERER-IPC] ${ts} Fetched ${(data || []).length} notifications`);
       } else {
+        console.log(`[RENDERER-IPC] ${ts} electronAPI unavailable, falling back to HTTP...`);
         const response = await fetch(API_URL, {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' },
@@ -30,19 +34,24 @@ export default function Home() {
         if (!response.ok) return;
         const data = await response.json();
         setNotifications(Array.isArray(data) ? data : []);
+        console.log(`[RENDERER-IPC] ${ts} HTTP fallback: fetched ${(data || []).length} notifications`);
       }
     } catch (err) {
-      console.log('Fetching notifications:', err);
+      console.log(`[RENDERER] ${new Date().toISOString()} Fetch notifications error:`, err);
     }
   };
 
   // Fetch initial crises (IPC first, HTTP fallback)
   const fetchCrises = async () => {
     try {
+      const ts = new Date().toISOString();
       if (typeof window !== 'undefined' && window.electronAPI) {
+        console.log(`[RENDERER-IPC] ${ts} Fetching crises via IPC...`);
         const data = await window.electronAPI.getCrises();
         setCrises(data || []);
+        console.log(`[RENDERER-IPC] ${ts} Fetched ${(data || []).length} crises`);
       } else {
+        console.log(`[RENDERER-IPC] ${ts} electronAPI unavailable, falling back to HTTP...`);
         const response = await fetch(CRISIS_API_URL, {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' },
@@ -50,13 +59,14 @@ export default function Home() {
         if (!response.ok) return;
         const data = await response.json();
         setCrises(Array.isArray(data) ? data : []);
+        console.log(`[RENDERER-IPC] ${ts} HTTP fallback: fetched ${(data || []).length} crises`);
       }
     } catch (err) {
-      console.log('Fetching crises:', err);
+      console.log(`[RENDERER] ${new Date().toISOString()} Fetch crises error:`, err);
     }
   };
 
-  // Resolve a crisis
+  // Delete a crisis
   const onResolveCrisis = async (id: number) => {
     try {
       if (window.electronAPI) {
@@ -78,9 +88,9 @@ useEffect(() => {
     let pollInterval: NodeJS.Timeout | null = null;
     if (API_CONFIG.POLL_INTERVAL > 0) {
       pollInterval = setInterval(() => {
-        console.log('Polling for new notifications...');
+        const ts = new Date().toISOString();
+        console.log(`[RENDERER-POLL] ${ts} Poll interval fired (${API_CONFIG.POLL_INTERVAL}ms) — fetching...`);
         fetchNotifications();
-        console.log('Polling for new crises...');
         fetchCrises();
       }, API_CONFIG.POLL_INTERVAL);
     }
@@ -88,8 +98,11 @@ useEffect(() => {
     // Listen for IPC push notifications
     if (typeof window !== 'undefined' && window.electronAPI) {
       window.electronAPI.onNewNotification((notification: Notification) => {
+        const ts = new Date().toISOString();
+        console.log(`[RENDERER-IPC] ${ts} Received notification:new (id=${notification.id}, title="${notification.title}")`);
         setNotifications(prev => {
           if (prev.some(n => n.id === notification.id)) {
+            console.log(`[RENDERER-IPC] ${ts} Duplicate notification (id=${notification.id}), skipping`);
             return prev;
           }
           playSiren();
@@ -98,13 +111,18 @@ useEffect(() => {
       });
       
       window.electronAPI.onRefreshNotifications(() => {
+        const ts = new Date().toISOString();
+        console.log(`[RENDERER-IPC] ${ts} Received notification:refresh — fetching...`);
         fetchNotifications();
       });
 
       // Listen for IPC push crises
       (window.electronAPI as any).onNewCrisis((crisis: Crisis) => {
+        const ts = new Date().toISOString();
+        console.log(`[RENDERER-IPC] ${ts} Received crisis:new (id=${crisis.id}, title="${crisis.title}")`);
         setCrises(prev => {
           if (prev.some(c => c.id === crisis.id)) {
+            console.log(`[RENDERER-IPC] ${ts} Duplicate crisis (id=${crisis.id}), skipping`);
             return prev;
           }
           playSiren();
@@ -113,6 +131,8 @@ useEffect(() => {
       });
       
       (window.electronAPI as any).onRefreshCrises(() => {
+        const ts = new Date().toISOString();
+        console.log(`[RENDERER-IPC] ${ts} Received crisis:refresh — fetching...`);
         fetchCrises();
       });
     }

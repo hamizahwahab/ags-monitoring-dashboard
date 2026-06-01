@@ -83,7 +83,7 @@ Copy the example environment file and set your API key:
 cp .env.example .env
 ```
 
-The default `.env.example` contains instructions for generating a secure key. For local development, the default fallback key `ASG-DASHBOARD-2024` is used if no `.env` is configured. In production, the key from `.env` is used.
+The default `.env.example` contains instructions for generating a secure key. For local development, the default fallback key `AGS-DASHBOARD-2026` is used if no `.env` is configured. In production, the key from `.env` is used.
 
 ---
 
@@ -257,7 +257,7 @@ X-API-Key: YOUR_API_KEY_HERE
 | GET      | `/api/crises`                  | No   | Get all active crises               |
 | GET      | `/api/crises/:id`              | No   | Get crisis by ID                    |
 | POST     | `/api/crises`                  | Yes  | Push a new crisis                   |
-| DELETE   | `/api/crises/:id`              | Yes  | Resolve (soft-delete) crisis by ID  |
+| DELETE   | `/api/crises/:id`              | Yes  | Delete crisis by ID                  |
 | DELETE   | `/api/crises/all`              | Yes  | Clear all crises                    |
 
 Full API documentation with request/response examples and cURL commands is available in [`API_DOCUMENTATION.md`](./API_DOCUMENTATION.md).
