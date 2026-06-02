@@ -1,6 +1,6 @@
 require('dotenv').config();
 
-const { app, BrowserWindow, ipcMain, session } = require('electron');
+const { app, BrowserWindow, ipcMain, session, screen } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const http = require('http');
@@ -26,7 +26,12 @@ function isValidApiKey(req) {
 }
 
 async function createWindow() {
-  mainWindow = new BrowserWindow({
+  // Detect external display (TV) — auto-fullscreen on secondary monitor
+  const displays = screen.getAllDisplays();
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const externalDisplay = displays.find(d => d.id !== primaryDisplay.id);
+
+  const windowOptions = {
     width: 1920,
     height: 1080,
     frame: false,
@@ -35,8 +40,26 @@ async function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
     },
-  });
-  mainWindow.maximize();
+  };
+
+  // If an external display (TV) is connected, position window there
+  if (externalDisplay) {
+    windowOptions.x = externalDisplay.bounds.x;
+    windowOptions.y = externalDisplay.bounds.y;
+    console.log(`[STARTUP] External display detected at (${externalDisplay.bounds.x}, ${externalDisplay.bounds.y}) — will auto-fullscreen`);
+  } else {
+    console.log('[STARTUP] No external display detected — using primary monitor');
+  }
+
+  mainWindow = new BrowserWindow(windowOptions);
+
+  if (externalDisplay) {
+    // TV — go fullscreen immediately (header will be hidden via the fullscreen listener)
+    mainWindow.setFullScreen(true);
+  } else {
+    // Single monitor — start maximized with header visible
+    mainWindow.maximize();
+  }
 
   // Notify renderer on fullscreen changes (F11, etc.)
   mainWindow.on('enter-full-screen', () => {
