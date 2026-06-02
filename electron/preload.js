@@ -44,4 +44,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.removeAllListeners('cycle-spraying:new');
     ipcRenderer.removeAllListeners('cycle-spraying:refresh');
   },
+  // Window controls
+  minimizeWindow: () => ipcRenderer.invoke('window:minimize'),
+  maximizeWindow: () => ipcRenderer.invoke('window:maximize'),
+  closeWindow: () => ipcRenderer.invoke('window:close'),
+  isMaximized: () => ipcRenderer.invoke('window:isMaximized'),
+  setFullscreen: (fullscreen) => ipcRenderer.invoke('window:setFullscreen', fullscreen),
+  onFullscreenChange: (callback) => {
+    ipcRenderer.on('window:fullscreenChanged', (_event, value) => callback(value));
+  },
+  removeFullscreenChangeListener: () => {
+    ipcRenderer.removeAllListeners('window:fullscreenChanged');
+  },
 });

@@ -15,6 +15,8 @@ import { Notification, Crisis } from '@/types';
 export default function Home() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [crises, setCrises] = useState<Crisis[]>([]);
+  const [isMaximized, setIsMaximized] = useState(true);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Fetch initial notifications (IPC first, HTTP fallback)
   const fetchNotifications = async () => {
@@ -79,10 +81,30 @@ export default function Home() {
     }
   };
 
+  // Window control handlers
+  const handleMinimize = () => { if (window.electronAPI) window.electronAPI.minimizeWindow(); };
+  const handleMaximize = async () => {
+    if (window.electronAPI) {
+      await window.electronAPI.maximizeWindow();
+      const max = await window.electronAPI.isMaximized();
+      setIsMaximized(max);
+    }
+  };
+  const handleClose = () => { if (window.electronAPI) window.electronAPI.closeWindow(); };
+  const handleFullscreen = () => {
+    if (window.electronAPI) window.electronAPI.setFullscreen(!isFullscreen);
+  };
+
 useEffect(() => {
     // Initial fetch
     fetchNotifications();
     fetchCrises();
+    
+    // Check window state for header maximize button
+    if (window.electronAPI) {
+      window.electronAPI.isMaximized().then(setIsMaximized);
+      window.electronAPI.onFullscreenChange(setIsFullscreen);
+    }
     
     // Set up polling if configured (fallback in case IPC push fails)
     let pollInterval: NodeJS.Timeout | null = null;
@@ -145,6 +167,7 @@ useEffect(() => {
       if (typeof window !== 'undefined' && window.electronAPI) {
         window.electronAPI.removeNewNotificationListener();
         (window.electronAPI as any).removeNewCrisisListener();
+        window.electronAPI.removeFullscreenChangeListener();
       }
     };
 
@@ -152,6 +175,102 @@ useEffect(() => {
 
   return (
     <main className="flex flex-col h-screen bg-[var(--tv-bg)] text-white overflow-hidden select-none">
+      
+      {/* DRAGGABLE HEADER BAR — hidden when in fullscreen mode */}
+      {!isFullscreen && (
+        <header className="flex items-center h-9 bg-[var(--tv-panel)] border-b border-white/5 shrink-0"
+                style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}>
+          
+          {/* Title */}
+          <div className="flex items-center gap-2 px-4">
+            <span className="w-2 h-2 rounded-full bg-[var(--critical-border)]"></span>
+            <span className="text-sm font-semibold text-[var(--tv-text)] tracking-wide">Dashboard 1</span>
+          </div>
+          
+          {/* Spacer */}
+          <div className="flex-1"></div>
+          
+          {/* Window Controls */}
+          <div className="flex h-full" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+            {/* Minimize */}
+            <button onClick={handleMinimize}
+                    className="flex items-center justify-center w-11 h-full text-[var(--tv-text-muted)] hover:text-white hover:bg-white/10 transition-colors"
+                    title="Minimize">
+              <svg width="12" height="12" viewBox="0 0 12 12">
+                <rect x="1" y="5.5" width="10" height="1" fill="currentColor"/>
+              </svg>
+            </button>
+            
+            {/* Maximize / Restore */}
+            <button onClick={handleMaximize}
+                    className="flex items-center justify-center w-11 h-full text-[var(--tv-text-muted)] hover:text-white hover:bg-white/10 transition-colors"
+                    title={isMaximized ? 'Restore' : 'Maximize'}>
+              {isMaximized ? (
+                <svg width="12" height="12" viewBox="0 0 12 12">
+                  <rect x="2" y="0.5" width="9" height="9" rx="0.5" fill="none" stroke="currentColor" strokeWidth="1"/>
+                  <rect x="0.5" y="2" width="9" height="9" rx="0.5" fill="none" stroke="currentColor" strokeWidth="1"/>
+                </svg>
+              ) : (
+                <svg width="12" height="12" viewBox="0 0 12 12">
+                  <rect x="1" y="1" width="10" height="10" rx="0.5" fill="none" stroke="currentColor" strokeWidth="1.2"/>
+                </svg>
+              )}
+            </button>
+            
+            {/* Enter Fullscreen */}
+            <button onClick={handleFullscreen}
+                    className="flex items-center justify-center w-11 h-full text-[var(--tv-text-muted)] hover:text-white hover:bg-white/10 transition-colors"
+                    title="Enter Fullscreen (F11)">
+              <svg width="14" height="14" viewBox="0 0 16 16">
+                <polyline points="2,6 2,2 6,2" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square"/>
+                <polyline points="10,2 14,2 14,6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square"/>
+                <polyline points="14,10 14,14 10,14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square"/>
+                <polyline points="6,14 2,14 2,10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square"/>
+                <line x1="2" y1="2" x2="6" y2="6" stroke="currentColor" strokeWidth="1.2"/>
+                <line x1="10" y1="6" x2="14" y2="2" stroke="currentColor" strokeWidth="1.2"/>
+                <line x1="14" y1="14" x2="10" y2="10" stroke="currentColor" strokeWidth="1.2"/>
+                <line x1="6" y1="10" x2="2" y2="14" stroke="currentColor" strokeWidth="1.2"/>
+              </svg>
+            </button>
+            
+            {/* Close */}
+            <button onClick={handleClose}
+                    className="flex items-center justify-center w-11 h-full text-[var(--tv-text-muted)] hover:text-white hover:bg-red-500/80 transition-colors"
+                    title="Close">
+              <svg width="12" height="12" viewBox="0 0 12 12">
+                <line x1="1" y1="1" x2="11" y2="11" stroke="currentColor" strokeWidth="1.2"/>
+                <line x1="11" y1="1" x2="1" y2="11" stroke="currentColor" strokeWidth="1.2"/>
+              </svg>
+            </button>
+          </div>
+        </header>
+      )}
+      
+      {/* FULLSCREEN HOVER STRIP — thin overlay when in fullscreen; hover to reveal exit button */}
+      {isFullscreen && (
+        <div className="fixed top-0 left-0 right-0 h-2 z-50 group cursor-default"
+             style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+            <div className="flex items-center justify-end h-8 bg-[var(--tv-panel)]/90 backdrop-blur-sm border-b border-white/5 px-2">
+              <button onClick={handleFullscreen}
+                      className="flex items-center gap-1.5 px-3 h-full text-xs text-[var(--tv-text-muted)] hover:text-white transition-colors"
+                      title="Exit Fullscreen (F11)">
+                <svg width="12" height="12" viewBox="0 0 16 16">
+                  <polyline points="2,6 2,2 6,2" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square"/>
+                  <polyline points="10,2 14,2 14,6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square"/>
+                  <polyline points="14,10 14,14 10,14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square"/>
+                  <polyline points="6,14 2,14 2,10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square"/>
+                  <line x1="6" y1="6" x2="2" y2="2" stroke="currentColor" strokeWidth="1.2"/>
+                  <line x1="14" y1="2" x2="10" y2="6" stroke="currentColor" strokeWidth="1.2"/>
+                  <line x1="10" y1="10" x2="14" y2="14" stroke="currentColor" strokeWidth="1.2"/>
+                  <line x1="2" y1="14" x2="6" y2="10" stroke="currentColor" strokeWidth="1.2"/>
+                </svg>
+                <span>Exit Fullscreen</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       
       <div className="flex flex-1 overflow-hidden">
         {/* CRISIS SIDEBAR (Left) - hidden when no crises */}

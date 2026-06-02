@@ -26,6 +26,14 @@ interface ElectronAPI {
   onNewSprayingPlot: (callback: (plot: SprayingPlot) => void) => void;
   onRefreshSprayingPlots: (callback: () => void) => void;
   removeNewSprayingPlotListener: () => void;
+  // Window controls
+  minimizeWindow: () => Promise<void>;
+  maximizeWindow: () => Promise<void>;
+  closeWindow: () => Promise<void>;
+  isMaximized: () => Promise<boolean>;
+  setFullscreen: (fullscreen: boolean) => Promise<void>;
+  onFullscreenChange: (callback: (fullscreen: boolean) => void) => void;
+  removeFullscreenChangeListener: () => void;
 }
 
 declare global {

@@ -29,12 +29,25 @@ async function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1920,
     height: 1080,
-    fullscreen: true,
+    frame: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
     },
+  });
+  mainWindow.maximize();
+
+  // Notify renderer on fullscreen changes (F11, etc.)
+  mainWindow.on('enter-full-screen', () => {
+    if (mainWindow) {
+      mainWindow.webContents.send('window:fullscreenChanged', true);
+    }
+  });
+  mainWindow.on('leave-full-screen', () => {
+    if (mainWindow) {
+      mainWindow.webContents.send('window:fullscreenChanged', false);
+    }
   });
 
   // In dev mode, load from localhost:3000, otherwise load static files
@@ -995,6 +1008,33 @@ function setupIPC() {
     if (mainWindow && mainWindow.webContents && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('cycle-spraying:refresh');
     }
+  });
+  
+  // Window controls
+  ipcMain.handle('window:minimize', () => {
+    if (mainWindow) mainWindow.minimize();
+  });
+  
+  ipcMain.handle('window:maximize', () => {
+    if (mainWindow) {
+      if (mainWindow.isMaximized()) {
+        mainWindow.unmaximize();
+      } else {
+        mainWindow.maximize();
+      }
+    }
+  });
+  
+  ipcMain.handle('window:close', () => {
+    if (mainWindow) mainWindow.close();
+  });
+  
+  ipcMain.handle('window:isMaximized', () => {
+    return mainWindow ? mainWindow.isMaximized() : false;
+  });
+  
+  ipcMain.handle('window:setFullscreen', (_, fullscreen) => {
+    if (mainWindow) mainWindow.setFullScreen(fullscreen);
   });
   
   // Get server info
