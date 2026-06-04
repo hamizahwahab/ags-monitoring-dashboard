@@ -280,7 +280,7 @@ function handleNewSprayingPlot(plot) {
   try {
     const createdAt = new Date().toISOString();
     const stmt = db.prepare('INSERT INTO cycle_spraying (field, plot, status, created_at) VALUES (?, ?, ?, ?)');
-    stmt.run([plot.field, plot.plot, plot.status || 'pending', createdAt]);
+    stmt.run([plot.field, plot.plot || '', plot.status || 'pending', createdAt]);
     stmt.free();
     
     const lastId = db.exec('SELECT last_insert_rowid()')[0].values[0][0];
@@ -795,13 +795,13 @@ return;
         try {
           const plot = JSON.parse(body);
           
-          if (!plot.field || !plot.plot) {
+          if (!plot.field) {
             res.writeHead(400, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'Missing field or plot' }));
+            res.end(JSON.stringify({ error: 'Missing field' }));
             return;
           }
           
-          if (plot.field.length > 200 || plot.plot.length > 200) {
+          if (plot.field.length > 200 || (plot.plot && plot.plot.length > 200)) {
             res.writeHead(400, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: 'Field or plot too long (max 200 chars)' }));
             return;

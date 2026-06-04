@@ -20,7 +20,7 @@ interface ElectronAPI {
   onRefreshCrises: (callback: () => void) => void;
   removeNewCrisisListener: () => void;
   getCycleSpraying: () => Promise<SprayingPlot[]>;
-  addSprayingPlot: (plot: { field: string; plot: string; status?: 'overdue' | 'pending' }) => Promise<SprayingPlot>;
+  addSprayingPlot: (plot: { field: string; plot?: string; status?: 'overdue' | 'pending' }) => Promise<SprayingPlot>;
   deleteSprayingPlot: (id: number) => Promise<void>;
   clearAllSprayingPlots: () => Promise<void>;
   onNewSprayingPlot: (callback: (plot: SprayingPlot) => void) => void;

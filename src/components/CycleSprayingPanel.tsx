@@ -74,7 +74,7 @@ export default function CycleSprayingPanel() {
                 className="flex items-center justify-between gap-1 px-2 py-1.5 rounded text-xs bg-red-700/80 text-white blink-overdue"
               >
                 <span className="font-semibold">{item.field}</span>
-                <span className="opacity-80">P{item.plot}</span>
+                {item.plot && <span className="opacity-80">{item.plot}</span>}
               </div>
             ))}
           </div>
@@ -89,7 +89,7 @@ export default function CycleSprayingPanel() {
                 className="flex items-center justify-between gap-1 px-2 py-1.5 rounded text-xs bg-yellow-600/80 text-white"
               >
                 <span className="font-semibold">{item.field}</span>
-                <span className="opacity-80">P{item.plot}</span>
+                {item.plot && <span className="opacity-80">{item.plot}</span>}
               </div>
             ))}
           </div>

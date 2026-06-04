@@ -595,6 +595,8 @@ curl -X DELETE "http://192.168.68.69:8001/api/crises/all" \
 
 Cycle spraying plots represent field/plot pairs that require monitoring. Plots can have a status of `overdue` (red, blinking) or `pending` (yellow, solid).
 
+> **Note:** The `plot` field is optional — you can send just a `field` name if there is no plot number.
+
 ### GET /api/cycle-spraying
 
 Retrieve all cycle spraying plots, ordered by field and plot.
@@ -622,9 +624,17 @@ Retrieve all cycle spraying plots, ordered by field and plot.
     "plot": "4",
     "status": "pending",
     "created_at": "2026-05-20T10:28:00Z"
+  },
+  {
+    "id": 3,
+    "field": "Field C",
+    "plot": "",
+    "status": "overdue",
+    "created_at": "2026-05-20T11:00:00Z"
   }
 ]
 ```
+> Note: `plot` will be an empty string `""` if not provided when creating the record.
 
 Returns an empty array `[]` if there are no plots.
 
@@ -649,7 +659,7 @@ Add a new cycle spraying plot.
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `field` | string | Yes | — | Field identifier (max 200 chars) |
-| `plot` | string | Yes | — | Plot identifier (max 200 chars) |
+| `plot` | string | No | `""` | Plot identifier (max 200 chars). Optional — omit if not needed. |
 | `status` | string | No | `"pending"` | One of: `"overdue"`, `"pending"` |
 
 #### Responses
@@ -667,7 +677,7 @@ Add a new cycle spraying plot.
 **400 Bad Request**
 
 ```json
-{ "error": "Missing field or plot" }
+{ "error": "Missing field" }
 ```
 
 ```json
@@ -693,6 +703,7 @@ Add a new cycle spraying plot.
 #### cURL Example
 
 ```bash
+# With plot number
 curl -X POST "http://192.168.68.69:8001/api/cycle-spraying" \
   -H "X-API-Key: YOUR_API_KEY_HERE" \
   -H "Content-Type: application/json" \
@@ -700,6 +711,15 @@ curl -X POST "http://192.168.68.69:8001/api/cycle-spraying" \
     "field": "2021A",
     "plot": "2",
     "status": "overdue"
+  }'
+
+# Without plot (field name only)
+curl -X POST "http://192.168.68.69:8001/api/cycle-spraying" \
+  -H "X-API-Key: YOUR_API_KEY_HERE" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "field": "Field C",
+    "status": "pending"
   }'
 ```
 
