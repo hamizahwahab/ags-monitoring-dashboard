@@ -1,6 +1,6 @@
 # ASG Monitoring Dashboard — API Reference
 
-> Base URL: `http://192.168.68.69:8001`
+> Base URL: `http://192.168.68.9:8001`
 >
 > All requests and responses use `application/json`.
 
@@ -166,7 +166,7 @@ Retrieve a single notification by its numeric ID.
 #### cURL Example
 
 ```bash
-curl -X GET "http://192.168.68.69:8001/api/notifications/1"
+curl -X GET "http://192.168.68.9:8001/api/notifications/1"
 ```
 
 ---
@@ -238,7 +238,7 @@ Push a new notification.
 #### cURL Example
 
 ```bash
-curl -X POST "http://192.168.68.69:8001/api/notifications" \
+curl -X POST "http://192.168.68.9:8001/api/notifications" \
   -H "X-API-Key: YOUR_API_KEY_HERE" \
   -H "Content-Type: application/json" \
   -d '{
@@ -296,7 +296,7 @@ Delete a single notification by its numeric ID.
 #### cURL Example
 
 ```bash
-curl -X DELETE "http://192.168.68.69:8001/api/notifications/42" \
+curl -X DELETE "http://192.168.68.9:8001/api/notifications/42" \
   -H "X-API-Key: YOUR_API_KEY_HERE"
 ```
 
@@ -332,7 +332,7 @@ Remove every notification from the database.
 #### cURL Example
 
 ```bash
-curl -X DELETE "http://192.168.68.69:8001/api/notifications/all" \
+curl -X DELETE "http://192.168.68.9:8001/api/notifications/all" \
   -H "X-API-Key: YOUR_API_KEY_HERE"
 ```
 
@@ -419,7 +419,7 @@ Retrieve a single crisis by its numeric ID.
 #### cURL Example
 
 ```bash
-curl -X GET "http://192.168.68.69:8001/api/crises/1"
+curl -X GET "http://192.168.68.9:8001/api/crises/1"
 ```
 
 ---
@@ -491,7 +491,7 @@ Report a new active crisis.
 #### cURL Example
 
 ```bash
-curl -X POST "http://192.168.68.69:8001/api/crises" \
+curl -X POST "http://192.168.68.9:8001/api/crises" \
   -H "X-API-Key: YOUR_API_KEY_HERE" \
   -H "Content-Type: application/json" \
   -d '{
@@ -549,7 +549,7 @@ Permanently delete a single crisis by its numeric ID (hard delete). The crisis i
 #### cURL Example
 
 ```bash
-curl -X DELETE "http://192.168.68.69:8001/api/crises/7" \
+curl -X DELETE "http://192.168.68.9:8001/api/crises/7" \
   -H "X-API-Key: YOUR_API_KEY_HERE"
 ```
 
@@ -585,7 +585,7 @@ Delete every crisis from the database (hard delete).
 #### cURL Example
 
 ```bash
-curl -X DELETE "http://192.168.68.69:8001/api/crises/all" \
+curl -X DELETE "http://192.168.68.9:8001/api/crises/all" \
   -H "X-API-Key: YOUR_API_KEY_HERE"
 ```
 
@@ -641,7 +641,7 @@ Returns an empty array `[]` if there are no plots.
 #### cURL Example
 
 ```bash
-curl -X GET "http://192.168.68.69:8001/api/cycle-spraying"
+curl -X GET "http://192.168.68.9:8001/api/cycle-spraying"
 ```
 
 ---
@@ -704,7 +704,7 @@ Add a new cycle spraying plot.
 
 ```bash
 # With plot number
-curl -X POST "http://192.168.68.69:8001/api/cycle-spraying" \
+curl -X POST "http://192.168.68.9:8001/api/cycle-spraying" \
   -H "X-API-Key: YOUR_API_KEY_HERE" \
   -H "Content-Type: application/json" \
   -d '{
@@ -714,7 +714,7 @@ curl -X POST "http://192.168.68.69:8001/api/cycle-spraying" \
   }'
 
 # Without plot (field name only)
-curl -X POST "http://192.168.68.69:8001/api/cycle-spraying" \
+curl -X POST "http://192.168.68.9:8001/api/cycle-spraying" \
   -H "X-API-Key: YOUR_API_KEY_HERE" \
   -H "Content-Type: application/json" \
   -d '{
@@ -771,7 +771,7 @@ Delete a single cycle spraying plot by its numeric ID.
 #### cURL Example
 
 ```bash
-curl -X DELETE "http://192.168.68.69:8001/api/cycle-spraying/42" \
+curl -X DELETE "http://192.168.68.9:8001/api/cycle-spraying/42" \
   -H "X-API-Key: YOUR_API_KEY_HERE"
 ```
 
@@ -811,7 +811,7 @@ Remove every cycle spraying plot from the database.
 #### cURL Example
 
 ```bash
-curl -X DELETE "http://192.168.68.69:8001/api/cycle-spraying/all" \
+curl -X DELETE "http://192.168.68.9:8001/api/cycle-spraying/all" \
   -H "X-API-Key: YOUR_API_KEY_HERE"
 ```
 
