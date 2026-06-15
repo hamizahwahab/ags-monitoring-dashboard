@@ -56,4 +56,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   removeFullscreenChangeListener: () => {
     ipcRenderer.removeAllListeners('window:fullscreenChanged');
   },
+  // Audio — load siren.mp3 as base64 data URL (avoids file:// fetch restrictions)
+  getSirenAudio: () => ipcRenderer.invoke('get-siren-audio'),
 });

@@ -34,6 +34,8 @@ interface ElectronAPI {
   setFullscreen: (fullscreen: boolean) => Promise<void>;
   onFullscreenChange: (callback: (fullscreen: boolean) => void) => void;
   removeFullscreenChangeListener: () => void;
+  // Audio — load siren.mp3 as base64 data URL
+  getSirenAudio: () => Promise<string | null>;
 }
 
 declare global {

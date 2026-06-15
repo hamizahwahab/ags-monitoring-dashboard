@@ -1070,6 +1070,20 @@ function setupIPC() {
       ip: '0.0.0.0'
     };
   });
+
+  // Read siren.mp3 audio file and return as base64 data URL
+  // (Avoids file:// fetch restrictions in Chromium)
+  ipcMain.handle('get-siren-audio', () => {
+    const audioPath = path.join(__dirname, '..', 'out', 'siren.mp3');
+    try {
+      const data = fs.readFileSync(audioPath);
+      const base64 = data.toString('base64');
+      return `data:audio/mpeg;base64,${base64}`;
+    } catch (err) {
+      console.error('[AUDIO] Failed to read siren.mp3:', err);
+      return null;
+    }
+  });
 }
 
 app.whenReady().then(async () => {
