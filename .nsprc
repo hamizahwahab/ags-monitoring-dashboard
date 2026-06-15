@@ -1,0 +1,10 @@
+{
+  "GHSA-qx2v-qp2m-jg93": {
+    "active": true,
+    "notes": "PostCSS XSS — not exploitable on local Electron TV dashboard. Fix would downgrade Next.js 16 → 9."
+  },
+  "GHSA-w7jw-789q-3m8p": {
+    "active": true,
+    "notes": "shell-quote in concurrently — not exploitable in our usage. Fix would break scripts."
+  }
+}
