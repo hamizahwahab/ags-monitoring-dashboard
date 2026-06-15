@@ -17,28 +17,25 @@ function getAudioContext(): AudioContext {
 /**
  * Play a short "ting" notification sound.
  * Uses Web Audio API — no external file needed.
- * Sound: Quick bright ping, 300ms, sine wave with fade-out.
+ * Sound: 1200Hz sine tone, 1.5s fade out.
  */
 export function playTing(): void {
   try {
     const ctx = getAudioContext();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
+    const oscillator = ctx.createOscillator();
+    const gainNode = ctx.createGain();
 
-    osc.type = 'sine';
-    // Quick bright ping: A5 -> A6 sweep
-    osc.frequency.setValueAtTime(880, ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(1760, ctx.currentTime + 0.1);
-    osc.frequency.exponentialRampToValueAtTime(1320, ctx.currentTime + 0.25);
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(1200, ctx.currentTime);
 
-    gain.gain.setValueAtTime(0.25, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+    gainNode.gain.setValueAtTime(1, ctx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.5);
 
-    osc.connect(gain);
-    gain.connect(ctx.destination);
+    oscillator.connect(gainNode);
+    gainNode.connect(ctx.destination);
 
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + 0.35);
+    oscillator.start(ctx.currentTime);
+    oscillator.stop(ctx.currentTime + 1.5);
   } catch (err) {
     console.log('[AUDIO] Ting play failed:', err);
   }
