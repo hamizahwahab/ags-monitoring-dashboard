@@ -4,11 +4,11 @@
 
 /// <reference path="../types/electron.d.ts" />
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import NotificationPanel from '@/components/NotificationPanel';
 import CrisisPanel from '@/components/CrisisPanel';
 import CycleSprayingPanel from '@/components/CycleSprayingPanel';
-import { playSiren } from '@/components/Siren';
+import { playSiren, playTing } from '@/components/Siren';
 import { API_URL, CRISIS_API_URL, API_CONFIG } from '@/config/api';
 import { Notification, Crisis } from '@/types';
 
@@ -17,6 +17,9 @@ export default function Home() {
   const [crises, setCrises] = useState<Crisis[]>([]);
   const [isMaximized, setIsMaximized] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  // Track latest IDs for polling-based sound detection
+  const latestNotifIdRef = useRef<number>(-1);
+  const latestCrisisIdRef = useRef<number>(-1);
 
   // Fetch initial notifications (IPC first, HTTP fallback)
   const fetchNotifications = async () => {
@@ -25,8 +28,17 @@ export default function Home() {
       if (typeof window !== 'undefined' && window.electronAPI) {
         console.log(`[RENDERER-IPC] ${ts} Fetching notifications via IPC...`);
         const data = await window.electronAPI.getNotifications();
-        setNotifications(data || []);
-        console.log(`[RENDERER-IPC] ${ts} Fetched ${(data || []).length} notifications`);
+        const items = data || [];
+        // Check if there are new items (for polling sound)
+        if (items.length > 0) {
+          const maxId = Math.max(...items.map((n: Notification) => n.id));
+          if (maxId > latestNotifIdRef.current && latestNotifIdRef.current !== -1) {
+            playTing();
+          }
+          latestNotifIdRef.current = maxId;
+        }
+        setNotifications(items);
+        console.log(`[RENDERER-IPC] ${ts} Fetched ${items.length} notifications`);
       } else {
         console.log(`[RENDERER-IPC] ${ts} electronAPI unavailable, falling back to HTTP...`);
         const response = await fetch(API_URL, {
@@ -35,8 +47,17 @@ export default function Home() {
         });
         if (!response.ok) return;
         const data = await response.json();
-        setNotifications(Array.isArray(data) ? data : []);
-        console.log(`[RENDERER-IPC] ${ts} HTTP fallback: fetched ${(data || []).length} notifications`);
+        const items = Array.isArray(data) ? data : [];
+        // Check if there are new items (for polling sound)
+        if (items.length > 0) {
+          const maxId = Math.max(...items.map((n: Notification) => n.id));
+          if (maxId > latestNotifIdRef.current && latestNotifIdRef.current !== -1) {
+            playTing();
+          }
+          latestNotifIdRef.current = maxId;
+        }
+        setNotifications(items);
+        console.log(`[RENDERER-IPC] ${ts} HTTP fallback: fetched ${items.length} notifications`);
       }
     } catch (err) {
       console.log(`[RENDERER] ${new Date().toISOString()} Fetch notifications error:`, err);
@@ -50,8 +71,17 @@ export default function Home() {
       if (typeof window !== 'undefined' && window.electronAPI) {
         console.log(`[RENDERER-IPC] ${ts} Fetching crises via IPC...`);
         const data = await window.electronAPI.getCrises();
-        setCrises(data || []);
-        console.log(`[RENDERER-IPC] ${ts} Fetched ${(data || []).length} crises`);
+        const items = data || [];
+        // Check if there are new items (for polling sound)
+        if (items.length > 0) {
+          const maxId = Math.max(...items.map((c: Crisis) => c.id));
+          if (maxId > latestCrisisIdRef.current && latestCrisisIdRef.current !== -1) {
+            playSiren();
+          }
+          latestCrisisIdRef.current = maxId;
+        }
+        setCrises(items);
+        console.log(`[RENDERER-IPC] ${ts} Fetched ${items.length} crises`);
       } else {
         console.log(`[RENDERER-IPC] ${ts} electronAPI unavailable, falling back to HTTP...`);
         const response = await fetch(CRISIS_API_URL, {
@@ -60,8 +90,17 @@ export default function Home() {
         });
         if (!response.ok) return;
         const data = await response.json();
-        setCrises(Array.isArray(data) ? data : []);
-        console.log(`[RENDERER-IPC] ${ts} HTTP fallback: fetched ${(data || []).length} crises`);
+        const items = Array.isArray(data) ? data : [];
+        // Check if there are new items (for polling sound)
+        if (items.length > 0) {
+          const maxId = Math.max(...items.map((c: Crisis) => c.id));
+          if (maxId > latestCrisisIdRef.current && latestCrisisIdRef.current !== -1) {
+            playSiren();
+          }
+          latestCrisisIdRef.current = maxId;
+        }
+        setCrises(items);
+        console.log(`[RENDERER-IPC] ${ts} HTTP fallback: fetched ${items.length} crises`);
       }
     } catch (err) {
       console.log(`[RENDERER] ${new Date().toISOString()} Fetch crises error:`, err);
@@ -127,7 +166,11 @@ useEffect(() => {
             console.log(`[RENDERER-IPC] ${ts} Duplicate notification (id=${notification.id}), skipping`);
             return prev;
           }
-          playSiren();
+          // Update latest ID ref so polling doesn't replay sound
+          if (notification.id > latestNotifIdRef.current) {
+            latestNotifIdRef.current = notification.id;
+          }
+          playTing();
           return [notification, ...prev];
         });
       });
@@ -146,6 +189,10 @@ useEffect(() => {
           if (prev.some(c => c.id === crisis.id)) {
             console.log(`[RENDERER-IPC] ${ts} Duplicate crisis (id=${crisis.id}), skipping`);
             return prev;
+          }
+          // Update latest ID ref so polling doesn't replay sound
+          if (crisis.id > latestCrisisIdRef.current) {
+            latestCrisisIdRef.current = crisis.id;
           }
           playSiren();
           return [crisis, ...prev];

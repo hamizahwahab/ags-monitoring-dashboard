@@ -6,6 +6,9 @@ const fs = require('fs');
 const http = require('http');
 const initSqlJs = require('sql.js');
 
+// Allow audio autoplay without user gesture (needed for TV dashboard)
+app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
+
 let mainWindow;
 let db;
 let dbPath;
