@@ -22,7 +22,7 @@ Real-time monitoring dashboard for the FOM Department. Displays live notificatio
 
 ## Overview
 
-The ASG Monitoring Dashboard provides a three-panel, real-time view of operational data for the After Sales department. It runs as a full-screen Electron application on a TV display, with an embedded HTTP server that accepts push notifications and crisis alerts from internal tools and scripts.
+The Dashboard 1 provides a three-panel, real-time view of operational data for the FOM Department. It runs as a full-screen Electron application on a TV display, with an embedded HTTP server that accepts push notifications and crisis alerts from internal tools and scripts.
 
 Data is persisted locally via SQLite, and the frontend updates in real time through both IPC push events from Electron and a polling fallback mechanism. The dashboard also plays an audible siren when new notifications or crises arrive.
 
