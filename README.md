@@ -1,6 +1,6 @@
-# ASG Monitoring Dashboard
+# Dashboard 1
 
-Real-time monitoring dashboard for the After Sales Department. Displays live notifications, active crises, and cycle spraying data on a TV-mounted display. Built with Electron, Next.js 16, and SQLite.
+Real-time monitoring dashboard for the FOM Department. Displays live notifications, active crises, and cycle spraying data on a TV-mounted display. Built with Electron, Next.js 16, and SQLite + MongoDB.
 
 ---
 
