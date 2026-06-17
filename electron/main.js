@@ -5,9 +5,81 @@ const path = require('path');
 const fs = require('fs');
 const http = require('http');
 const initSqlJs = require('sql.js');
+const { MongoClient } = require('mongodb');
 
 // Allow audio autoplay without user gesture (needed for TV dashboard)
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
+
+// MongoDB connection
+let mongoClient = null;
+let mongoConnecting = false;
+
+function setupMongoListeners(client) {
+  // Log connection state changes (invisible to UI, visible in dev console)
+  client.on('connectionPoolReady', () => console.log('[MONGO] Pool ready'));
+  client.on('connectionPoolClosed', () => console.log('[MONGO] Pool closed'));
+  client.on('serverHeartbeatSucceeded', () => { /* silent */ });
+  client.on('serverHeartbeatFailed', (event) => {
+    console.log(`[MONGO] Heartbeat failed: ${event.failure?.message || 'unknown'}`);
+  });
+
+  // Auto-reconnect if topology is destroyed (rare in v7, but safe guard)
+  client.on('topologyClosed', async () => {
+    console.log('[MONGO] Topology closed — scheduling reconnect...');
+    // Don't attempt immediate reconnect; wait and let the driver retry.
+    // If this fires repeatedly, escalation is needed, but for a TV dashboard
+    // the next polling will just return [] and try again.
+  });
+}
+
+async function connectMongo() {
+  const uri = process.env.MONGODB_URI;
+  if (!uri) {
+    console.log('[MONGO] No MONGODB_URI in .env — skipping MongoDB connection');
+    return null;
+  }
+  try {
+    const client = new MongoClient(uri, {
+      serverSelectionTimeoutMS: 10000,  // wait 10s to find a server
+      heartbeatFrequencyMS: 10000,      // check every 10s
+      retryWrites: false,               // read-only, no writes
+    });
+    setupMongoListeners(client);
+    await client.connect();
+    console.log('[MONGO] Connected successfully');
+    mongoConnecting = false;
+    return client;
+  } catch (err) {
+    console.log('[MONGO] Connection failed:', err.message);
+    mongoConnecting = false;
+    return null;
+  }
+}
+
+// Periodic health check — reconnects if client was lost
+function startMongoHealthCheck() {
+  setInterval(async () => {
+    if (mongoConnecting) return; // already attempting
+    if (!mongoClient) {
+      // Client never connected or was null — try now
+      mongoConnecting = true;
+      console.log('[MONGO] Health-check: attempting connection...');
+      mongoClient = await connectMongo();
+      if (mongoClient) {
+        console.log('[MONGO] Health-check: reconnected successfully');
+      }
+    } else {
+      // Client exists — ping to verify it's alive
+      try {
+        await mongoClient.db('admin').command({ ping: 1 });
+      } catch {
+        // Ping failed — client might be in bad state, try replacing it
+        console.log('[MONGO] Health-check: ping failed, will reconnect on next check');
+        mongoClient = null;
+      }
+    }
+  }, 60000); // check every 60 seconds
+}
 
 let mainWindow;
 let db;
@@ -1084,10 +1156,108 @@ function setupIPC() {
       return null;
     }
   });
+
+  // Fetch spraying plots from MongoDB (read-only)
+  ipcMain.handle('mongo:getSprayingPlots', async () => {
+    if (!mongoClient) {
+      console.log('[MONGO] Not connected — returning empty');
+      return [];
+    }
+    try {
+      const db = mongoClient.db('office');
+
+      // Fetch all plots for name lookup
+      const plots = await db.collection('o_plots').find({}).toArray();
+      const plotMap = {};
+      for (const plot of plots) {
+        plotMap[plot._id.toString()] = plot.name;
+      }
+
+      // Fetch all active schedules
+      const schedules = await db.collection('o_schedules').find({ status: 'ACTIVE' }).toArray();
+
+      // Fetch all active reports
+      const reports = await db.collection('o_scheduleplotreports').find({ status: 'ACTIVE' }).toArray();
+
+      // Build report map: scheduleId (as string) -> reports[]
+      const reportMap = {};
+      for (const report of reports) {
+        const sid = report.scheduleId.toString();
+        if (!reportMap[sid]) reportMap[sid] = [];
+        reportMap[sid].push(report);
+      }
+
+      const now = new Date();
+      const results = [];
+
+      for (const schedule of schedules) {
+        const sid = schedule._id.toString();
+        const scheduleReports = reportMap[sid] || [];
+
+        // Check if there's a report with percentageComplete = 100 (completed — skip)
+        const hasComplete = scheduleReports.some(r =>
+          r.percentageComplete && r.percentageComplete.toString() === '100'
+        );
+        if (hasComplete) continue;
+
+        // Check if there's a report with percentageComplete !== 100 → pending (yellow)
+        const hasIncomplete = scheduleReports.some(r =>
+          r.percentageComplete && r.percentageComplete.toString() !== '100'
+        );
+        if (hasIncomplete) {
+          results.push({
+            id: sid,
+            field: plotMap[schedule.plotId.toString()] || schedule.plotId.toString(),
+            plot: '',
+            status: 'pending',
+            created_at: schedule.scheduledate,
+          });
+          continue;
+        }
+
+        // No report — check scheduled date
+        if (!schedule.scheduledate) continue;
+        const scheduledDate = new Date(schedule.scheduledate);
+        const diffDays = Math.floor((now - scheduledDate) / (1000 * 60 * 60 * 24));
+
+        if (diffDays <= 0) continue; // Not yet due — skip
+
+        if (diffDays === 1) {
+          // 1 day late → pending (yellow)
+          results.push({
+            id: sid,
+            field: plotMap[schedule.plotId.toString()] || schedule.plotId.toString(),
+            plot: '',
+            status: 'pending',
+            created_at: schedule.scheduledate,
+          });
+        } else if (diffDays >= 2) {
+          // 2+ days late → overdue (red)
+          results.push({
+            id: sid,
+            field: plotMap[schedule.plotId.toString()] || schedule.plotId.toString(),
+            plot: '',
+            status: 'overdue',
+            created_at: schedule.scheduledate,
+          });
+        }
+      }
+
+      return results;
+    } catch (err) {
+      console.error('[MONGO] getSprayingPlots failed:', err.message);
+      return [];
+    }
+  });
 }
 
 app.whenReady().then(async () => {
   await initDatabase();
+
+  // Connect to MongoDB early so it's ready before the window loads
+  mongoClient = await connectMongo();
+  startMongoHealthCheck();
+
   setupIPC();
   startHttpServer();
   createWindow();
@@ -1111,6 +1281,11 @@ app.whenReady().then(async () => {
 
 app.on('window-all-closed', () => {
   saveDatabase();
+  // Close MongoDB connection
+  if (mongoClient) {
+    mongoClient.close().catch(() => {});
+    mongoClient = null;
+  }
   if (process.platform !== 'darwin') {
     app.quit();
   }

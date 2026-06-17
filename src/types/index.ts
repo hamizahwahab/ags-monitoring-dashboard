@@ -28,7 +28,7 @@ export interface CrisisPanelProps {
 }
 
 export interface SprayingPlot {
-  id: number;
+  id: number | string;
   field: string;
   plot?: string;    // optional — can combine with field name
   status: 'overdue' | 'pending';

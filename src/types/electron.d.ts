@@ -36,6 +36,8 @@ interface ElectronAPI {
   removeFullscreenChangeListener: () => void;
   // Audio — load siren.mp3 as base64 data URL
   getSirenAudio: () => Promise<string | null>;
+  // MongoDB — fetch spraying plots from AGS database
+  getMongoSprayingPlots: () => Promise<SprayingPlot[]>;
 }
 
 declare global {

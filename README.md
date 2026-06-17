@@ -42,6 +42,73 @@ Data is persisted locally via SQLite, and the frontend updates in real time thro
 - **TV-optimized theme**: Dark theme with CSS custom properties shared with sibling "Sprayed Dashboard" project
 - **Seamless notification carousel**: Infinite vertical scroll with pause-on-hover
 
+### Cycle Spraying Panel
+
+The center panel displays live spraying schedule data sourced directly from the company's **MongoDB** (`o_schedules`, `o_scheduleplotreports`, `o_plots`). Every **30 seconds**, the panel queries MongoDB and classifies each active schedule using the following logic:
+
+```
+                    ┌─────────────────────┐
+                    │  Has a report with   │
+                    │  percentageComplete  │
+                    │  = 100?              │
+                    └──────────┬──────────┘
+                               │ YES
+                               ├──────────► HIDDEN (skip — job done)
+                               │
+                               │ NO
+                               ▼
+                    ┌─────────────────────┐
+                    │  Has a report with   │
+                    │  percentageComplete  │
+                    │  ≠ 100?              │
+                    └──────────┬──────────┘
+                               │ YES
+                               ├──────────► PENDING 🟡
+                               │             (yellow — spraying started
+                               │              but not complete)
+                               │ NO
+                               ▼
+                    ┌─────────────────────┐
+                    │  scheduledate        │
+                    │  compared to today   │
+                    └──────────┬──────────┘
+                               │
+          ┌────────────────────┼────────────────────┐
+          │                    │                    │
+          ▼                    ▼                    ▼
+    diff ≤ 0 days          diff = 1 day         diff ≥ 2 days
+    (future / on-time)     (1 day late)         (2+ days late)
+          │                    │                    │
+          ▼                    ▼                    ▼
+     HIDDEN               PENDING 🟡           OVERDUE 🔴
+     (skip — not           (yellow)            (red — blinks)
+      due yet)
+```
+
+**Visual layout of the panel:**
+
+```
+┌──────────────────────────────────────────┐
+│           CYCLE SPRAYING                  │
+├──────────────────────────────────────────┤
+│ ┌──────┐ ┌──────┐ ┌──────┐              │  ← red, blinking
+│ │3586A │ │4920B │ │7150C │              │    (overdue ≥2 days)
+│ └──────┘ └──────┘ └──────┘              │
+│ ┌──────┐ ┌──────┐                       │  ← yellow
+│ │2210D │ │6830E │                       │    (pending — 1 day late
+│ └──────┘ └──────┘                       │     or incomplete report)
+│                                          │
+│    No cycle spraying data                │  ← empty state
+│                                          │
+└──────────────────────────────────────────┘
+```
+
+Key details:
+- **Completed jobs** (report with 100%) are hidden — only actionable items appear
+- **Future schedules** (not yet due) are hidden — only late or in-progress items show
+- **Plot names** (e.g. `3586A`) are resolved live from the `o_plots` collection via `plotId`
+- If MongoDB is unreachable, the panel shows empty without errors, and falls back to the local HTTP API
+
 ---
 
 ## Tech Stack
@@ -51,7 +118,7 @@ Data is persisted locally via SQLite, and the frontend updates in real time thro
 | Desktop     | Electron 41                            |
 | Frontend    | Next.js 16 (Turbopack), React 19       |
 | Styling     | Tailwind CSS v4                        |
-| Database    | SQLite via sql.js                      |
+| Database    | SQLite via sql.js + MongoDB (read-only)|
 | Language    | TypeScript                             |
 | Bundling    | electron-builder (Portable Windows exe)|
 
@@ -133,7 +200,7 @@ npm run electron:start
 ```
 ags-monitoring-dashboard/
 ├── electron/
-│   ├── main.js              # Electron main process: HTTP server, SQLite, IPC handlers
+│   ├── main.js              # Electron main process: HTTP server, SQLite, MongoDB, IPC handlers
 │   └── preload.js           # contextBridge IPC API exposed to renderer
 ├── src/
 │   ├── app/

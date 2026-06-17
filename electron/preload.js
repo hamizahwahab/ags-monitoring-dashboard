@@ -58,4 +58,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   // Audio — load siren.mp3 as base64 data URL (avoids file:// fetch restrictions)
   getSirenAudio: () => ipcRenderer.invoke('get-siren-audio'),
+  // MongoDB — fetch spraying plots from AGS database
+  getMongoSprayingPlots: () => ipcRenderer.invoke('mongo:getSprayingPlots'),
 });

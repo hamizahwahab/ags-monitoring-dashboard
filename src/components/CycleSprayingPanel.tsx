@@ -9,19 +9,23 @@ export default function CycleSprayingPanel() {
 
   const fetchPlots = async () => {
     try {
+      // Try MongoDB first (AGS database)
       if (window.electronAPI) {
-        const data = await window.electronAPI.getCycleSpraying();
-        setPlots(data || []);
-      } else {
-        // Fallback: fetch via HTTP
-        const response = await fetch(`${API_CONFIG.BASE_URL}/api/cycle-spraying`, {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' },
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setPlots(Array.isArray(data) ? data : []);
+        const data = await window.electronAPI.getMongoSprayingPlots();
+        if (data && data.length > 0) {
+          setPlots(data);
+          return;
         }
+      }
+
+      // Fallback: fetch from local SQLite API
+      const response = await fetch(`${API_CONFIG.BASE_URL}/api/cycle-spraying`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setPlots(Array.isArray(data) ? data : []);
       }
     } catch (err) {
       console.log('Error fetching cycle spraying plots:', err);
