@@ -375,7 +375,7 @@ If port 8001 is occupied, you will see an `EADDRINUSE` error in the console. Kil
 To reset the database, delete the `notifications.db` file from Electron's `userData` directory. On Windows, this is typically:
 
 ```
-%APPDATA%/ASG Monitoring Dashboard/notifications.db
+%APPDATA%/Dashboard 1/notifications.db
 ```
 
 The database will be recreated with fresh tables on the next app launch.

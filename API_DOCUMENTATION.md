@@ -1,4 +1,4 @@
-# ASG Monitoring Dashboard — API Reference
+# Dashboard 1 — API Reference
 
 > Base URL: `http://192.168.68.9:8001`
 >

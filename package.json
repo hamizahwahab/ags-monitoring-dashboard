@@ -2,7 +2,7 @@
   "name": "ags-monitoring-dashboard",
   "version": "0.1.0",
   "private": true,
-  "description": "ASG Monitoring Dashboard - Electron + Next.js + SQLite",
+  "description": "Dashboard 1 - Electron + Next.js + SQLite + MongoDB",
   "main": "electron/main.js",
   "scripts": {
     "dev": "next dev",
@@ -37,7 +37,7 @@
   },
   "build": {
     "appId": "com.asg.monitoring-dashboard",
-    "productName": "ASG Monitoring Dashboard",
+    "productName": "Dashboard 1",
     "directories": {
       "output": "dist"
     },

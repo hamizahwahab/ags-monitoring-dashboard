@@ -1165,83 +1165,147 @@ function setupIPC() {
     }
     try {
       const db = mongoClient.db('office');
-
-      // Fetch all plots for name lookup
-      const plots = await db.collection('o_plots').find({}).toArray();
-      const plotMap = {};
-      for (const plot of plots) {
-        plotMap[plot._id.toString()] = plot.name;
-      }
-
-      // Fetch all active schedules
-      const schedules = await db.collection('o_schedules').find({ status: 'ACTIVE' }).toArray();
-
-      // Fetch all active reports
-      const reports = await db.collection('o_scheduleplotreports').find({ status: 'ACTIVE' }).toArray();
-
-      // Build report map: scheduleId (as string) -> reports[]
-      const reportMap = {};
-      for (const report of reports) {
-        const sid = report.scheduleId.toString();
-        if (!reportMap[sid]) reportMap[sid] = [];
-        reportMap[sid].push(report);
-      }
-
       const now = new Date();
-      const results = [];
 
-      for (const schedule of schedules) {
-        const sid = schedule._id.toString();
-        const scheduleReports = reportMap[sid] || [];
+      // Single aggregation pipeline — one round trip to MongoDB
+      const results = await db.collection('o_schedules').aggregate([
+        // 1. Only active schedules
+        { $match: { status: 'ACTIVE' } },
 
-        // Check if there's a report with percentageComplete = 100 (completed — skip)
-        const hasComplete = scheduleReports.some(r =>
-          r.percentageComplete && r.percentageComplete.toString() === '100'
-        );
-        if (hasComplete) continue;
+        // 2. Look up the plot name
+        {
+          $lookup: {
+            from: 'o_plots',
+            localField: 'plotId',
+            foreignField: '_id',
+            as: 'plotInfo',
+          },
+        },
+        { $addFields: { plotName: { $arrayElemAt: ['$plotInfo.name', 0] } } },
 
-        // Check if there's a report with percentageComplete !== 100 → pending (yellow)
-        const hasIncomplete = scheduleReports.some(r =>
-          r.percentageComplete && r.percentageComplete.toString() !== '100'
-        );
-        if (hasIncomplete) {
-          results.push({
-            id: sid,
-            field: plotMap[schedule.plotId.toString()] || schedule.plotId.toString(),
-            plot: '',
-            status: 'pending',
-            created_at: schedule.scheduledate,
-          });
-          continue;
-        }
+        // 3. Look up related reports
+        {
+          $lookup: {
+            from: 'o_scheduleplotreports',
+            localField: '_id',
+            foreignField: 'scheduleId',
+            as: 'reports',
+          },
+        },
 
-        // No report — check scheduled date
-        if (!schedule.scheduledate) continue;
-        const scheduledDate = new Date(schedule.scheduledate);
-        const diffDays = Math.floor((now - scheduledDate) / (1000 * 60 * 60 * 24));
+        // 4. Filter to only reports with status ACTIVE
+        {
+          $addFields: {
+            activeReports: {
+              $filter: {
+                input: '$reports',
+                as: 'r',
+                cond: { $eq: ['$$r.status', 'ACTIVE'] },
+              },
+            },
+          },
+        },
 
-        if (diffDays <= 0) continue; // Not yet due — skip
+        // 5. Classify each schedule
+        {
+          $addFields: {
+            hasComplete: {
+              $gt: [
+                {
+                  $size: {
+                    $filter: {
+                      input: '$activeReports',
+                      as: 'r',
+                      cond: { $eq: [{ $toString: '$$r.percentageComplete' }, '100'] },
+                    },
+                  },
+                },
+                0,
+              ],
+            },
+            hasIncomplete: {
+              $gt: [
+                {
+                  $size: {
+                    $filter: {
+                      input: '$activeReports',
+                      as: 'r',
+                      cond: {
+                        $and: [
+                          { $ne: [{ $toString: '$$r.percentageComplete' }, null] },
+                          { $ne: [{ $toString: '$$r.percentageComplete' }, '100'] },
+                        ],
+                      },
+                    },
+                  },
+                },
+                0,
+              ],
+            },
+          },
+        },
 
-        if (diffDays === 1) {
-          // 1 day late → pending (yellow)
-          results.push({
-            id: sid,
-            field: plotMap[schedule.plotId.toString()] || schedule.plotId.toString(),
-            plot: '',
-            status: 'pending',
-            created_at: schedule.scheduledate,
-          });
-        } else if (diffDays >= 2) {
-          // 2+ days late → overdue (red)
-          results.push({
-            id: sid,
-            field: plotMap[schedule.plotId.toString()] || schedule.plotId.toString(),
-            plot: '',
-            status: 'overdue',
-            created_at: schedule.scheduledate,
-          });
-        }
-      }
+        // 6. Remove completed (100%) schedules
+        { $match: { hasComplete: false } },
+
+        // 7. Compute days since scheduledate and classify
+        {
+          $addFields: {
+            daysLate: {
+              $divide: [
+                { $subtract: [now, '$scheduledate'] },
+                1000 * 60 * 60 * 24,
+              ],
+            },
+          },
+        },
+        {
+          $addFields: {
+            daysLateFloor: { $floor: '$daysLate' },
+          },
+        },
+
+        // 8. Keep only overdue/pending items
+        {
+          $match: {
+            $or: [
+              { hasIncomplete: true },               // report exists but not 100%
+              { daysLateFloor: { $gte: 1 } },         // at least 1 day late (no complete report)
+            ],
+          },
+        },
+
+        // 9. Format output
+        {
+          $project: {
+            _id: 0,
+            id: { $toString: '$_id' },
+            field: { $ifNull: ['$plotName', { $toString: '$plotId' }] },
+            plot: { $literal: '' },
+            status: {
+              $cond: {
+                if: {
+                  $or: [
+                    '$hasIncomplete',
+                    { $eq: ['$daysLateFloor', 1] },
+                  ],
+                },
+                then: 'pending',
+                else: 'overdue',
+              },
+            },
+            created_at: '$scheduledate',
+          },
+        },
+
+        // 10. Sort by severity (overdue first), then by days late descending
+        {
+          $sort: {
+            status: 1,   // 'overdue' < 'pending' alphabetically
+            daysLateFloor: -1,
+          },
+        },
+      ]).toArray();
 
       return results;
     } catch (err) {

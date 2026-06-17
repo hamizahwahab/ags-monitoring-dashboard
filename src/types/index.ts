@@ -1,4 +1,4 @@
-// Shared Types for ASG Monitoring Dashboard
+// Shared Types for Dashboard 1
 
 export interface Notification {
   id: number;
